@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 @Service
 public class AiBillScannerService {
 
-    @Value("${gemini.api.key}")
+    @Value("${gemini.api.key:}")
     private String apiKey;
 
     @Value("${gemini.model:gemini-3.6-flash}")
