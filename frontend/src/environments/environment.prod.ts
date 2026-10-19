@@ -5,7 +5,7 @@ const getApiBaseUrl = (): string => {
       return custom.trim().replace(/\/+$/, '');
     }
   }
-  return 'https://finance-tracker-backend.onrender.com';
+  return 'https://finance-tracker-backend-nr64.onrender.com';
 };
 
 export const environment = {
