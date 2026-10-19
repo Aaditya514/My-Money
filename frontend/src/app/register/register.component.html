@@ -1,0 +1,207 @@
+<div class="auth-wrapper animate-fade-in">
+  <div class="card auth-card">
+    <div class="auth-header">
+      <div class="auth-brand-mark mb-2">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+      </div>
+      <h1 class="auth-title">{{ otpStep ? 'Verify Phone Number' : 'Create Account' }}</h1>
+      <p class="auth-subtitle">{{ otpStep ? 'Enter the 6-digit verification code sent to your phone' : 'Sign up using your phone number to get started' }}</p>
+    </div>
+
+    <!-- Error Alert -->
+    <div *ngIf="errorMessage" class="alert alert-danger mb-3" role="alert">
+      <span>{{ errorMessage }}</span>
+      <button type="button" class="alert-close" (click)="errorMessage = ''" aria-label="Dismiss alert">&times;</button>
+    </div>
+
+    <!-- Success / OTP Simulation Alert -->
+    <div *ngIf="otpStep && simulatedOtp" class="alert alert-info mb-3 d-flex align-items-center justify-content-between" role="alert">
+      <div>
+        <span class="fw-bold">🔔 Demo SMS OTP:</span>
+        <code class="ms-2 px-2 py-1 bg-white text-dark rounded fs-6 fw-bold letter-spacing-1">{{ simulatedOtp }}</code>
+      </div>
+      <span class="small text-muted">10m valid</span>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate>
+      
+      <!-- ============================================== -->
+      <!-- STEP 1: Account Details & 10-Digit Phone       -->
+      <!-- ============================================== -->
+      <div *ngIf="!otpStep" class="animate-fade-in">
+        <!-- Full Name Field -->
+        <div class="form-group mb-3">
+          <label for="name" class="form-label">Full Name <span class="required" aria-hidden="true">*</span></label>
+          <input
+            type="text"
+            id="name"
+            class="form-control"
+            formControlName="name"
+            placeholder="e.g. Rahul Sharma"
+            [class.is-invalid]="isFieldInvalid('name')"
+            autocomplete="name"
+          />
+          <div *ngIf="isFieldInvalid('name')" class="form-error" role="alert">
+            <span *ngIf="registerForm.get('name')?.errors?.['required']">Full name is required.</span>
+            <span *ngIf="registerForm.get('name')?.errors?.['minlength']">At least 2 characters.</span>
+            <span *ngIf="registerForm.get('name')?.errors?.['pattern']">Letters and spaces only.</span>
+          </div>
+        </div>
+
+        <!-- Phone Number Field (10 digits) -->
+        <div class="form-group mb-3">
+          <label for="phoneNumber" class="form-label">Mobile Number (10 Digits) <span class="required" aria-hidden="true">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text font-monospace fw-semibold text-secondary">+91</span>
+            <input
+              type="tel"
+              id="phoneNumber"
+              class="form-control font-tabular"
+              formControlName="phoneNumber"
+              placeholder="9876543210"
+              maxlength="10"
+              inputmode="numeric"
+              [class.is-invalid]="isFieldInvalid('phoneNumber')"
+              autocomplete="tel-national"
+            />
+          </div>
+          <div *ngIf="isFieldInvalid('phoneNumber')" class="form-error" role="alert">
+            <span *ngIf="registerForm.get('phoneNumber')?.errors?.['required']">Phone number is required.</span>
+            <span *ngIf="registerForm.get('phoneNumber')?.errors?.['pattern']">Must be exactly 10 digits (e.g. 9876543210).</span>
+          </div>
+        </div>
+
+        <!-- Optional Email Field -->
+        <div class="form-group mb-3">
+          <label for="email" class="form-label">Email Address <span class="text-secondary small">(Optional)</span></label>
+          <input
+            type="email"
+            id="email"
+            class="form-control"
+            formControlName="email"
+            placeholder="e.g. rahul@example.com"
+            [class.is-invalid]="isFieldInvalid('email')"
+            autocomplete="email"
+          />
+          <div *ngIf="isFieldInvalid('email')" class="form-error" role="alert">
+            <span *ngIf="registerForm.get('email')?.errors?.['email']">Please enter a valid email format.</span>
+          </div>
+        </div>
+
+        <!-- Password Field -->
+        <div class="form-group mb-3">
+          <label for="password" class="form-label">Password <span class="required" aria-hidden="true">*</span></label>
+          <input
+            type="password"
+            id="password"
+            class="form-control"
+            formControlName="password"
+            placeholder="At least 6 characters"
+            [class.is-invalid]="isFieldInvalid('password')"
+            autocomplete="new-password"
+          />
+          <div *ngIf="isFieldInvalid('password')" class="form-error" role="alert">
+            <span *ngIf="registerForm.get('password')?.errors?.['required']">Password is required.</span>
+            <span *ngIf="registerForm.get('password')?.errors?.['minlength']">Minimum 6 characters.</span>
+          </div>
+        </div>
+
+        <!-- Confirm Password Field -->
+        <div class="form-group mb-4">
+          <label for="confirmPassword" class="form-label">Confirm Password <span class="required" aria-hidden="true">*</span></label>
+          <input
+            type="password"
+            id="confirmPassword"
+            class="form-control"
+            formControlName="confirmPassword"
+            placeholder="Re-enter password"
+            [class.is-invalid]="isFieldInvalid('confirmPassword') || isPasswordMismatch()"
+            autocomplete="new-password"
+          />
+          <div *ngIf="isFieldInvalid('confirmPassword') && registerForm.get('confirmPassword')?.errors?.['required']" class="form-error" role="alert">
+            <span>Please confirm your password.</span>
+          </div>
+          <div *ngIf="isPasswordMismatch() && !registerForm.get('confirmPassword')?.errors?.['required']" class="form-error" role="alert">
+            <span>Passwords do not match.</span>
+          </div>
+        </div>
+
+        <!-- Request OTP Button -->
+        <button type="button" class="btn btn-primary btn-block py-2" (click)="onRequestOtp()" [disabled]="loading">
+          <span *ngIf="!loading">Send OTP Verification</span>
+          <span *ngIf="loading" class="d-inline-flex align-items-center gap-2">
+            <span class="spinner-border spinner-border-sm" role="status"></span>
+            Sending OTP...
+          </span>
+        </button>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- STEP 2: 6-Digit OTP Verification               -->
+      <!-- ============================================== -->
+      <div *ngIf="otpStep" class="animate-fade-in">
+        <div class="p-3 bg-surface-subtle border rounded-lg mb-3 d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-secondary small d-block">Verifying Number:</span>
+            <span class="fw-bold fs-6 font-tabular">+91 {{ registerForm.get('phoneNumber')?.value }}</span>
+          </div>
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="onBackToDetails()">
+            Edit Number
+          </button>
+        </div>
+
+        <div class="form-group mb-4">
+          <label for="otp" class="form-label text-center d-block">Enter 6-Digit OTP <span class="required">*</span></label>
+          <input
+            type="text"
+            id="otp"
+            class="form-control text-center font-monospace fw-bold fs-3 tracking-wider py-2"
+            formControlName="otp"
+            placeholder="••••••"
+            maxlength="6"
+            inputmode="numeric"
+            autofocus
+            [class.is-invalid]="isFieldInvalid('otp')"
+          />
+          <div *ngIf="isFieldInvalid('otp')" class="form-error text-center" role="alert">
+            <span *ngIf="registerForm.get('otp')?.errors?.['required']">Please enter the 6-digit OTP.</span>
+            <span *ngIf="registerForm.get('otp')?.errors?.['pattern']">OTP must be exactly 6 digits.</span>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <span class="text-secondary small">Didn't receive code?</span>
+          <button
+            type="button"
+            class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold"
+            (click)="onResendOtp()"
+            [disabled]="resendCooldown > 0 || loading"
+          >
+            <span *ngIf="resendCooldown > 0">Resend in {{ resendCooldown }}s</span>
+            <span *ngIf="resendCooldown === 0">Resend OTP</span>
+          </button>
+        </div>
+
+        <div class="d-flex flex-column gap-2">
+          <button type="submit" class="btn btn-primary btn-block py-2" [disabled]="loading || !registerForm.get('otp')?.value">
+            <span *ngIf="!loading">Verify &amp; Create Account</span>
+            <span *ngIf="loading" class="d-inline-flex align-items-center gap-2">
+              <span class="spinner-border spinner-border-sm" role="status"></span>
+              Verifying...
+            </span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-block py-2" (click)="onBackToDetails()">
+            &larr; Back to Details
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <div class="auth-footer mt-4">
+      <p class="mb-0">Already have an account? <a routerLink="/login">Sign in</a></p>
+    </div>
+  </div>
+</div>

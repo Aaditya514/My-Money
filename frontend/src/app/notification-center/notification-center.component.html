@@ -1,0 +1,163 @@
+<!-- Floating Heads-Up Banner (Urgent Financial Alerts) -->
+<div class="heads-up-container" *ngIf="activeBanner" (click)="onNotificationClick(activeBanner)">
+  <div class="heads-up-card animate-slide-down">
+    <div class="heads-up-icon-box" [ngClass]="'icon-' + activeBanner.type.toLowerCase()">
+      <span *ngIf="activeBanner.type === 'BILL'">⏰</span>
+      <span *ngIf="activeBanner.type === 'BUDGET'">⚠️</span>
+      <span *ngIf="activeBanner.type === 'SPLITWISE'">💸</span>
+      <span *ngIf="activeBanner.type === 'SYSTEM'">🔔</span>
+    </div>
+    <div class="heads-up-text">
+      <div class="heads-up-title">{{ activeBanner.title }}</div>
+      <div class="heads-up-body">{{ activeBanner.body }}</div>
+    </div>
+    <div class="heads-up-actions" (click)="$event.stopPropagation()">
+      <button type="button" class="btn-banner-action" (click)="onNotificationClick(activeBanner)">
+        View &rarr;
+      </button>
+      <button type="button" class="btn-banner-close" (click)="dismissBanner()" aria-label="Dismiss">&times;</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notification Center Drawer & Backdrop -->
+<div class="notif-backdrop" *ngIf="isOpen" (click)="close()">
+  <div class="notif-drawer animate-drawer-in" (click)="$event.stopPropagation()">
+
+    <!-- Drawer Header -->
+    <div class="drawer-header d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-2">
+        <span class="header-icon">🔔</span>
+        <h2 class="drawer-title mb-0">Financial Alerts</h2>
+        <span class="unread-pill" *ngIf="unreadCount > 0">{{ unreadCount }} new</span>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn-test-notif" (click)="onSendTest()" title="Trigger a test alert on this device">
+          <span>⚡ Send Test</span>
+        </button>
+        <button type="button" class="drawer-close-btn" (click)="close()" aria-label="Close">&times;</button>
+      </div>
+    </div>
+
+    <!-- Phone Lock-Screen / System Notification Permission Banner -->
+    <div class="phone-permission-card default-prompt" *ngIf="systemPermission === 'default'">
+      <div class="perm-card-icon">📲</div>
+      <div class="perm-card-content">
+        <div class="perm-card-title">Enable Phone Lock-Screen Alerts</div>
+        <div class="perm-card-desc">Receive native Android notifications for bills, rent, budgets, and Splitwise debts.</div>
+      </div>
+      <button type="button" class="btn-enable-phone" (click)="enablePhoneNotifications()">
+        Enable
+      </button>
+    </div>
+
+    <div class="phone-permission-card granted-state" *ngIf="systemPermission === 'granted'">
+      <div class="perm-card-icon">✅</div>
+      <div class="perm-card-content">
+        <div class="perm-card-title d-flex align-items-center">
+          <span class="perm-status-dot"></span>
+          Phone System Alerts Active
+        </div>
+        <div class="perm-card-desc">System alerts will appear in your phone's notification tray and lock screen.</div>
+      </div>
+      <button type="button" class="btn-test-phone" (click)="onSendPhoneTest()" title="Trigger a real OS notification">
+        ⚡ Test Phone
+      </button>
+    </div>
+
+    <div class="phone-permission-card denied-state" *ngIf="systemPermission === 'denied'">
+      <div class="perm-card-icon">⚠️</div>
+      <div class="perm-card-content">
+        <div class="perm-card-title">System Alerts Blocked</div>
+        <div class="perm-card-desc">Tap the lock icon in Chrome's address bar to allow notifications for this app.</div>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-pills-bar">
+      <button
+        type="button"
+        class="filter-pill-btn"
+        [class.active]="activeFilter === 'ALL'"
+        (click)="activeFilter = 'ALL'">
+        All ({{ notifications.length }})
+      </button>
+      <button
+        type="button"
+        class="filter-pill-btn"
+        [class.active]="activeFilter === 'BILL'"
+        (click)="activeFilter = 'BILL'">
+        ⏰ Bills &amp; Rent
+      </button>
+      <button
+        type="button"
+        class="filter-pill-btn"
+        [class.active]="activeFilter === 'BUDGET'"
+        (click)="activeFilter = 'BUDGET'">
+        ⚠️ Budgets
+      </button>
+      <button
+        type="button"
+        class="filter-pill-btn"
+        [class.active]="activeFilter === 'SPLITWISE'"
+        (click)="activeFilter = 'SPLITWISE'">
+        💸 Splitwise
+      </button>
+    </div>
+
+    <!-- Bulk Actions Row -->
+    <div class="bulk-actions-row d-flex justify-content-between align-items-center" *ngIf="notifications.length > 0">
+      <button type="button" class="action-text-btn" (click)="onMarkAllAsRead()" [disabled]="unreadCount === 0">
+        Mark all as read
+      </button>
+      <button type="button" class="action-text-btn text-danger" (click)="onClearAll()">
+        Clear all
+      </button>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="notifications-feed">
+      <div *ngIf="filteredNotifications.length === 0" class="empty-feed text-center py-5">
+        <div class="empty-bell-icon mb-2">🎉</div>
+        <div class="fw-semibold text-slate-800">All caught up!</div>
+        <div class="text-secondary small mt-1">No active financial notifications. Rent reminders, budget warnings, and Splitwise debts will appear here.</div>
+        <button type="button" class="btn btn-secondary btn-sm mt-3" (click)="onSendTest()">
+          Send Test Notification
+        </button>
+      </div>
+
+      <div
+        *ngFor="let notif of filteredNotifications"
+        class="notif-item-card"
+        [class.unread]="!notif.read"
+        (click)="onNotificationClick(notif)">
+        <div class="notif-item-header d-flex justify-content-between align-items-start">
+          <div class="d-flex align-items-center gap-2">
+            <span class="unread-dot" *ngIf="!notif.read"></span>
+            <span class="notif-badge" [ngClass]="getTypeBadge(notif.type).class">
+              {{ getTypeBadge(notif.type).label }}
+            </span>
+            <span class="notif-time">{{ getTimeAgo(notif.date) }}</span>
+          </div>
+          <button type="button" class="btn-item-dismiss" (click)="onDismiss(notif.id, $event)" title="Dismiss">&times;</button>
+        </div>
+
+        <div class="notif-item-body mt-2">
+          <div class="notif-item-title">{{ notif.title }}</div>
+          <div class="notif-item-desc text-secondary small mt-1">{{ notif.body }}</div>
+        </div>
+
+        <div class="notif-item-footer mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+          <span class="notif-action-hint">
+            <span *ngIf="notif.type === 'BILL'">Pay / Review Bill &rarr;</span>
+            <span *ngIf="notif.type === 'BUDGET'">Check Budget &rarr;</span>
+            <span *ngIf="notif.type === 'SPLITWISE'">Open Split Group &rarr;</span>
+            <span *ngIf="notif.type === 'SYSTEM'">Open &rarr;</span>
+          </span>
+          <span class="notif-amount-pill" *ngIf="notif.amount">₹{{ notif.amount | number:'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

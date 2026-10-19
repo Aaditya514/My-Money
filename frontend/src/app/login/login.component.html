@@ -1,0 +1,68 @@
+<div class="auth-wrapper animate-fade-in">
+  <div class="card auth-card">
+    <div class="auth-header">
+      <div class="auth-brand-mark mb-2">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+      </div>
+      <h1 class="auth-title">Finance Tracker</h1>
+      <p class="auth-subtitle">Sign in to your financial ledger &amp; budget planning dashboard</p>
+    </div>
+
+    <!-- Alert -->
+    <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+      <span>{{ errorMessage }}</span>
+      <button type="button" class="alert-close" (click)="errorMessage = ''" aria-label="Dismiss alert">&times;</button>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+      <!-- Phone Number or Email Field -->
+      <div class="form-group mb-3">
+        <label for="email" class="form-label">Phone Number or Email <span class="required" aria-hidden="true">*</span></label>
+        <input
+          type="text"
+          id="email"
+          class="form-control"
+          formControlName="email"
+          placeholder="e.g. 9876543210 or name@example.com"
+          [class.is-invalid]="isFieldInvalid('email')"
+          autocomplete="username"
+        />
+        <div *ngIf="isFieldInvalid('email')" class="form-error" role="alert">
+          <span *ngIf="loginForm.get('email')?.errors?.['required']">Phone number or email is required.</span>
+        </div>
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group mb-4">
+        <label for="password" class="form-label">Password <span class="required" aria-hidden="true">*</span></label>
+        <input
+          type="password"
+          id="password"
+          class="form-control"
+          formControlName="password"
+          placeholder="Enter password"
+          [class.is-invalid]="isFieldInvalid('password')"
+          autocomplete="current-password"
+        />
+        <div *ngIf="isFieldInvalid('password')" class="form-error" role="alert">
+          <span *ngIf="loginForm.get('password')?.errors?.['required']">Password is required.</span>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">
+        <span *ngIf="!loading">Sign In</span>
+        <span *ngIf="loading" class="d-inline-flex align-items-center gap-2">
+          <span class="spinner-border spinner-border-sm" role="status"></span>
+          Authenticating...
+        </span>
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <p class="mb-0">Don't have an account? <a routerLink="/register">Register here</a></p>
+    </div>
+  </div>
+</div>

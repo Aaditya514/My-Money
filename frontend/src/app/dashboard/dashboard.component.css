@@ -1,0 +1,323 @@
+/* ==========================================================================
+   Dashboard Component Styles
+   ========================================================================== */
+
+/* Month Selector */
+.month-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-md);
+  padding: 2px 4px;
+}
+
+.month-selector .nav-btn {
+  padding: 4px 6px;
+  min-height: auto;
+  line-height: 1;
+  border: none;
+  background: transparent;
+  color: var(--slate-600);
+}
+
+.month-selector .nav-btn:hover {
+  background-color: var(--slate-100);
+  color: var(--slate-900);
+}
+
+.month-select,
+.year-select {
+  border: none;
+  background-color: transparent;
+  padding: 4px 6px;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-main);
+  cursor: pointer;
+  outline: none;
+  color-scheme: light;
+}
+
+.month-select option,
+.year-select option {
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+}
+
+:host-context([data-theme="dark"]) .month-select,
+:host-context([data-theme="dark"]) .year-select,
+:host-context(body.dark-theme) .month-select,
+:host-context(body.dark-theme) .year-select {
+  color-scheme: dark !important;
+  color: #f8fafc !important;
+  background-color: transparent !important;
+}
+
+:host-context([data-theme="dark"]) .month-select option,
+:host-context([data-theme="dark"]) .year-select option,
+:host-context(body.dark-theme) .month-select option,
+:host-context(body.dark-theme) .year-select option {
+  background-color: #161e2e !important;
+  color: #f8fafc !important;
+}
+
+.month-select:focus,
+.year-select:focus {
+  outline: 2px solid var(--primary);
+  border-radius: var(--radius-sm);
+}
+
+/* 1. Restrained 3-Metric KPI Status Strip */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.kpi-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kpi-card:hover {
+  border-color: var(--slate-300);
+  box-shadow: var(--shadow-sm);
+}
+
+.kpi-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--slate-500);
+  margin-bottom: var(--space-1);
+}
+
+.kpi-value {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: var(--space-1);
+}
+
+.kpi-caption {
+  font-size: var(--fs-xs);
+  color: var(--slate-500);
+  margin-bottom: var(--space-3);
+}
+
+.kpi-link {
+  margin-top: auto;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.kpi-link:hover {
+  text-decoration: underline;
+}
+
+.kpi-subtle-badge {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: auto;
+  font-size: var(--fs-xs);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+/* 2. Dual Planning Grid */
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.metric-highlight {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+}
+
+.buffer-indicator {
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--income-subtle);
+  border: 1px solid var(--income-border);
+  border-radius: var(--radius-md);
+}
+
+.buffer-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--income);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.buffer-val {
+  font-size: var(--fs-lg);
+  margin: var(--space-1) 0;
+}
+
+/* Goals Summary Card */
+.goal-summary-card {
+  padding: var(--space-4);
+  background-color: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+}
+
+.goal-item {
+  padding: var(--space-3);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+/* 3. Charts Grid */
+.dashboard-charts-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: var(--space-4);
+}
+
+.category-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: var(--space-2);
+}
+
+.category-row {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Responsive layout adjustments */
+@media (max-width: 960px) {
+  .kpi-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile Month Bar */
+.mobile-month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 6px 10px;
+  box-shadow: var(--shadow-xs);
+}
+
+.mobile-month-selects {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.mobile-month-selects .month-select,
+.mobile-month-selects .year-select {
+  border: none;
+  background: transparent;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--text-main);
+  padding: 4px;
+}
+
+/* Mobile Hero Card */
+.mobile-hero-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-4);
+  box-shadow: var(--shadow-xs);
+}
+
+.mobile-hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+}
+
+.mobile-hero-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.mobile-hero-amount {
+  font-size: 1.875rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: var(--space-1) 0 var(--space-3) 0;
+  line-height: 1.15;
+}
+
+.mobile-hero-stats {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-canvas);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 8px;
+}
+
+.mobile-hero-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.mobile-hero-stat-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.mobile-hero-stat-val {
+  font-size: var(--fs-base);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.mobile-hero-stat-divider {
+  width: 1px;
+  height: 28px;
+  background-color: var(--border-color);
+}
+

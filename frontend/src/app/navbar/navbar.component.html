@@ -1,0 +1,196 @@
+<!-- Desktop / Tablet Top Header (>= 768px) -->
+<header class="app-header desktop-navbar" *ngIf="isLoggedIn()">
+  <div class="header-inner">
+    <div class="brand-section">
+      <a routerLink="/dashboard" class="brand-link">
+        <span class="brand-mark">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </span>
+        <span class="brand-title">Finance Tracker</span>
+      </a>
+    </div>
+
+    <!-- Desktop Navigation Links -->
+    <nav class="nav-links" aria-label="Desktop Navigation">
+      <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Home</a>
+      <a routerLink="/transactions" routerLinkActive="active">Transactions</a>
+      <a routerLink="/budgets" routerLinkActive="active">Budgets</a>
+      <a routerLink="/savings-goals" routerLinkActive="active">Goals</a>
+      <a routerLink="/recurring" routerLinkActive="active">Recurring</a>
+      <a routerLink="/splitwise" routerLinkActive="active">Splitwise</a>
+      <a routerLink="/salary-plan" routerLinkActive="active">Salary Plan</a>
+      <a routerLink="/categories" routerLinkActive="active">Categories</a>
+      <a routerLink="/ai-scanner" routerLinkActive="active">AI Scanner</a>
+    </nav>
+
+    <!-- Desktop User Actions -->
+    <!-- Desktop User Actions -->
+    <div class="user-section">
+      <!-- Theme Toggle -->
+      <button type="button" class="btn-nav-theme" (click)="toggleTheme()" [title]="(isDarkMode$ | async) ? 'Switch to Light Mode' : 'Switch to Dark Mode'" aria-label="Toggle Dark Mode">
+        <svg *ngIf="!(isDarkMode$ | async)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <svg *ngIf="(isDarkMode$ | async)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
+
+      <!-- Notification Bell -->
+      <button type="button" class="btn-nav-bell" (click)="openNotifications()" title="Financial Alerts" aria-label="Financial Alerts">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="nav-bell-badge" *ngIf="(unreadCount$ | async) as count" [class.d-none]="count === 0">
+          {{ count }}
+        </span>
+      </button>
+
+      <span class="user-badge" *ngIf="currentUser" [title]="currentUser.email">
+        {{ currentUser.name }}
+      </span>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="onLogout()">
+        Sign Out
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile Top Status Bar (< 768px) -->
+<header class="mobile-top-bar" *ngIf="isLoggedIn()">
+  <div class="mobile-top-inner">
+    <a routerLink="/dashboard" class="mobile-brand">
+      <span class="brand-mark-sm">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+      </span>
+      <span class="mobile-brand-title">Finance Tracker</span>
+    </a>
+
+    <div class="mobile-top-actions">
+      <!-- Mobile Theme Toggle -->
+      <button type="button" class="mobile-icon-btn" (click)="toggleTheme()" [title]="(isDarkMode$ | async) ? 'Switch to Light Mode' : 'Switch to Dark Mode'" aria-label="Toggle Theme">
+        <svg *ngIf="!(isDarkMode$ | async)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <svg *ngIf="(isDarkMode$ | async)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
+
+      <!-- Mobile In-App Alerts Bell -->
+      <button type="button" class="mobile-icon-btn position-relative" (click)="openNotifications()" title="Financial Alerts" aria-label="Financial Alerts">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="mobile-bell-dot" *ngIf="(unreadCount$ | async) as count" [class.d-none]="count === 0">
+          {{ count > 9 ? '9+' : count }}
+        </span>
+      </button>
+
+      <!-- Quick AI Scan shortcut on mobile top bar -->
+      <a routerLink="/ai-scanner" class="mobile-icon-btn" title="Scan Receipt" aria-label="Scan Receipt">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+      </a>
+
+      <!-- Quick profile button leading to /more -->
+      <a routerLink="/more" class="mobile-user-avatar" *ngIf="currentUser" [title]="currentUser.name" aria-label="User Profile & Settings">
+        {{ currentUser.name.charAt(0).toUpperCase() }}
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile Bottom Navigation Bar (< 768px) -->
+<nav class="mobile-bottom-nav" *ngIf="isLoggedIn()" aria-label="Mobile Navigation">
+  <div class="bottom-nav-inner">
+    <!-- 1. Home -->
+    <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="bottom-nav-item">
+      <div class="bottom-nav-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </div>
+      <span class="bottom-nav-label">Home</span>
+    </a>
+
+    <!-- 2. Transactions -->
+    <a routerLink="/transactions" routerLinkActive="active" class="bottom-nav-item">
+      <div class="bottom-nav-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+      </div>
+      <span class="bottom-nav-label">Transactions</span>
+    </a>
+
+    <!-- 3. Budgets -->
+    <a routerLink="/budgets" routerLinkActive="active" class="bottom-nav-item">
+      <div class="bottom-nav-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+          <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+        </svg>
+      </div>
+      <span class="bottom-nav-label">Budgets</span>
+    </a>
+
+    <!-- 4. More -->
+    <a routerLink="/more" routerLinkActive="active" class="bottom-nav-item">
+      <div class="bottom-nav-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="1.5"></circle>
+          <circle cx="19" cy="12" r="1.5"></circle>
+          <circle cx="5" cy="12" r="1.5"></circle>
+        </svg>
+      </div>
+      <span class="bottom-nav-label">More</span>
+    </a>
+  </div>
+</nav>
+
+<!-- Mobile Floating Action Button (FAB) for Instant Transaction Entry -->
+<a
+  routerLink="/transactions/add"
+  class="mobile-fab animate-fade-in"
+  *ngIf="isLoggedIn() && !isAddPage()"
+  title="Add Transaction"
+  aria-label="Add Transaction">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+</a>

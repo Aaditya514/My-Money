@@ -1,0 +1,781 @@
+<div class="container animate-fade-in">
+  <!-- Header & Navigation -->
+  <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+      <h1 class="page-title">Monthly Salary & Budget Plan</h1>
+      <p class="text-secondary mb-0">Customizable income sources, category allocations, and real-time cash flow cushion.</p>
+    </div>
+
+    <!-- Actions & Month Selector -->
+    <div class="d-flex align-items-center flex-wrap gap-2">
+      <a routerLink="/categories" class="btn btn-secondary btn-sm" title="Manage Categories">
+        Manage Categories
+      </a>
+
+      <!-- Month Selector Navigator -->
+      <div class="month-navigator">
+        <button type="button" class="nav-arrow-btn" (click)="previousMonth()" title="Previous Month" aria-label="Previous Month">&lsaquo;</button>
+        <div class="select-group">
+          <select class="month-select" [(ngModel)]="currentMonth" (ngModelChange)="onMonthChange($event)" aria-label="Month">
+            <option *ngFor="let m of monthNames; let i = index" [ngValue]="i + 1">{{ m }}</option>
+          </select>
+          <select class="year-select" [(ngModel)]="currentYear" (ngModelChange)="onYearChange($event)" aria-label="Year">
+            <option *ngFor="let y of availableYears" [ngValue]="y">{{ y }}</option>
+          </select>
+        </div>
+        <button type="button" class="nav-arrow-btn" (click)="nextMonth()" title="Next Month" aria-label="Next Month">&rsaquo;</button>
+      </div>
+
+      <!-- Action Buttons -->
+      <ng-container *ngIf="salaryPlan?.isConfigured">
+        <button type="button" class="btn btn-sm btn-secondary" (click)="exportCsv()" title="Export Plan to CSV">
+          Export CSV
+        </button>
+        <button type="button" class="btn btn-sm btn-secondary" (click)="printStatement()" title="Print / PDF Statement">
+          Print Report
+        </button>
+        <button type="button" class="btn btn-sm btn-primary" (click)="openEditPlanModal()">
+          Edit Plan
+        </button>
+        <button type="button" class="btn btn-sm btn-secondary" (click)="openCopyModal()" title="Copy plan to/from another month">
+          Copy
+        </button>
+        <button type="button" class="btn btn-sm btn-danger" (click)="openDeleteConfirmModal()" title="Delete monthly plan">
+          Delete
+        </button>
+      </ng-container>
+      <ng-container *ngIf="!salaryPlan?.isConfigured">
+        <button type="button" class="btn btn-sm btn-primary" (click)="openCreatePlanModal()">
+          + Create Plan
+        </button>
+        <button type="button" class="btn btn-sm btn-secondary" (click)="openCopyModal()">
+          Copy from Month
+        </button>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+  </div>
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading financial plan...</span>
+    </div>
+    <p class="mt-2 text-secondary">Loading financial plan and actuals...</p>
+  </div>
+
+  <!-- Empty State when Plan is Not Configured -->
+  <div *ngIf="!loading && (!salaryPlan || !salaryPlan.isConfigured)" class="empty-plan-card card text-center p-5 mb-4 shadow-sm">
+    <h3 class="mb-2 fs-lg fw-semibold">No Plan Configured for {{ monthNames[currentMonth - 1] }} {{ currentYear }}</h3>
+    <p class="text-secondary mx-auto mb-4" style="max-width: 600px;">
+      You have not set up a budget plan for this month yet. Configure your expected income sources and category allocations, or copy from a prior month.
+      <br>
+      <small class="text-muted">Note: Actual transactions and financial records are still actively tracked below.</small>
+    </p>
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <button class="btn btn-primary px-4 py-2" (click)="openCreatePlanModal()">
+        + Create Custom Plan
+      </button>
+      <button class="btn btn-secondary px-4 py-2" (click)="openCopyModal()">
+        Copy from Prior Month
+      </button>
+    </div>
+
+    <!-- Actuals Tracked So Far -->
+    <div class="mt-5 pt-4 border-top text-start" *ngIf="salaryPlan">
+      <h5 class="text-dark font-weight-bold mb-3">Actual Activity Tracked This Month</h5>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="p-3 bg-light rounded border">
+            <span class="text-secondary small font-weight-bold">Actual Inflow / Income</span>
+            <div class="h4 font-weight-bold text-primary mt-1 mb-0">₹{{ salaryPlan.actualIncome.toLocaleString('en-IN') }}</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="p-3 bg-light rounded border">
+            <span class="text-secondary small font-weight-bold">Actual Expenses Spent</span>
+            <div class="h4 font-weight-bold text-danger mt-1 mb-0">₹{{ salaryPlan.actualExpenses.toLocaleString('en-IN') }}</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="p-3 bg-light rounded border">
+            <span class="text-secondary small font-weight-bold">Actual Net Liquid Savings</span>
+            <div class="h4 font-weight-bold" [ngClass]="salaryPlan.actualNetSavings >= 0 ? 'text-success' : 'text-danger'">
+              ₹{{ salaryPlan.actualNetSavings.toLocaleString('en-IN') }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Configured Plan View -->
+  <div *ngIf="!loading && salaryPlan && salaryPlan.isConfigured">
+    <!-- Over-allocation Warning Banner -->
+    <div *ngIf="salaryPlan.isOverAllocated" class="alert alert-warning border-warning shadow-sm d-flex align-items-center gap-3 mb-4" role="alert">
+      <div>
+        <h5 class="alert-heading mb-1 font-weight-bold">Allocations Exceed Income by ₹{{ salaryPlan.overAllocatedAmount.toLocaleString('en-IN') }}</h5>
+        <p class="mb-0 small text-dark">
+          Total planned allocations (₹{{ salaryPlan.totalPlannedAllocations.toLocaleString('en-IN') }}) exceed your available income (₹{{ salaryPlan.totalPlannedIncome.toLocaleString('en-IN') }}).
+          This plan is saved and active, but you may want to adjust allocations or add additional income sources.
+        </p>
+      </div>
+    </div>
+
+    <!-- Top 5 Summary Cards Grid -->
+    <div class="plan-summary-grid mb-4">
+      <!-- Card 1: Available Planned Income -->
+      <div class="plan-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <span class="plan-label">Planned Income</span>
+          <span class="badge bg-primary-subtle text-primary">Inflow</span>
+        </div>
+        <h3 class="plan-amount text-primary">₹{{ salaryPlan.totalPlannedIncome.toLocaleString('en-IN') }}</h3>
+        <div class="actual-row d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+          <span class="text-secondary small">Actual Tracked:</span>
+          <span class="font-weight-bold">₹{{ salaryPlan.actualIncome.toLocaleString('en-IN') }}</span>
+        </div>
+        <div class="variance-row d-flex justify-content-between align-items-center mt-1">
+          <span class="text-secondary small">Income Variance:</span>
+          <span class="badge" [ngClass]="salaryPlan.incomeVariance >= 0 ? 'bg-success' : 'bg-warning text-dark'">
+            {{ salaryPlan.incomeVariance >= 0 ? '+' : '' }}₹{{ salaryPlan.incomeVariance.toLocaleString('en-IN') }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Card 2: Planned Living Expenses -->
+      <div class="plan-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <span class="plan-label">Planned Expenses</span>
+          <span class="badge bg-secondary-subtle text-secondary">Budget</span>
+        </div>
+        <h3 class="plan-amount text-dark">₹{{ salaryPlan.totalPlannedExpenses.toLocaleString('en-IN') }}</h3>
+        <div class="actual-row d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+          <span class="text-secondary small">Actual Spent:</span>
+          <span class="font-weight-bold" [class.text-danger]="salaryPlan.actualExpenses > salaryPlan.totalPlannedExpenses">
+            ₹{{ salaryPlan.actualExpenses.toLocaleString('en-IN') }}
+          </span>
+        </div>
+        <div class="variance-row d-flex justify-content-between align-items-center mt-1">
+          <span class="text-secondary small">Expense Variance:</span>
+          <span class="badge" [ngClass]="salaryPlan.expenseVariance >= 0 ? 'bg-success' : 'bg-danger'">
+            {{ salaryPlan.expenseVariance >= 0 ? '₹' + salaryPlan.expenseVariance.toLocaleString('en-IN') + ' Saved' : '₹' + (-salaryPlan.expenseVariance).toLocaleString('en-IN') + ' Over' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Card 3: Planned Savings Allocations -->
+      <div class="plan-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <span class="plan-label">Planned Savings</span>
+          <span class="badge bg-success-subtle text-success">Reserve</span>
+        </div>
+        <h3 class="plan-amount text-success">₹{{ salaryPlan.totalPlannedSavings.toLocaleString('en-IN') }}</h3>
+        <div class="actual-row d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+          <span class="text-secondary small">Actual Saved:</span>
+          <span class="font-weight-bold text-success">₹{{ salaryPlan.actualEmergencyFund.toLocaleString('en-IN') }}</span>
+        </div>
+        <div class="variance-row d-flex justify-content-between align-items-center mt-1">
+          <span class="text-secondary small">Target Status:</span>
+          <span class="badge" [ngClass]="salaryPlan.actualEmergencyFund >= salaryPlan.totalPlannedSavings ? 'bg-success' : 'bg-secondary'">
+            {{ salaryPlan.actualEmergencyFund >= salaryPlan.totalPlannedSavings ? 'Met ✓' : 'In Progress' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Card 4: Remaining Cushion / Buffer -->
+      <div class="plan-card" [ngClass]="salaryPlan.isOverAllocated ? 'card-overallocated' : 'buffer-card'">
+        <div class="d-flex justify-content-between align-items-start">
+          <span class="plan-label" [class.text-white-50]="!salaryPlan.isOverAllocated">
+            {{ salaryPlan.isOverAllocated ? 'Over-Allocated' : 'Unallocated Cushion' }}
+          </span>
+          <span class="badge" [ngClass]="salaryPlan.isOverAllocated ? 'bg-danger text-white' : 'bg-white text-dark font-weight-bold'">
+            {{ salaryPlan.isOverAllocated ? 'Deficit' : 'Surplus' }}
+          </span>
+        </div>
+        <h3 class="plan-amount" [class.text-white]="!salaryPlan.isOverAllocated" [class.text-danger]="salaryPlan.isOverAllocated">
+          ₹{{ salaryPlan.calculatedBuffer.toLocaleString('en-IN') }}
+        </h3>
+        <div class="formula-box small mt-2 pt-2 border-top" [class.border-white-50]="!salaryPlan.isOverAllocated" [class.text-white-50]="!salaryPlan.isOverAllocated">
+          Formula: Income ₹{{ salaryPlan.totalPlannedIncome.toLocaleString('en-IN') }} − Allocations ₹{{ salaryPlan.totalPlannedAllocations.toLocaleString('en-IN') }}
+        </div>
+        <div class="mt-1 small font-weight-bold" [class.text-white]="!salaryPlan.isOverAllocated" [class.text-dark]="salaryPlan.isOverAllocated">
+          {{ salaryPlan.isOverAllocated ? 'Planned spending exceeds income' : 'Free cash flow for discretionary use' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Income Sources & Allocation Breakdown Grid -->
+    <div class="row g-4 mb-4">
+      <!-- Left: Income Sources -->
+      <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+          <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="m-0 font-weight-bold text-dark">Planned Income Sources</h5>
+            <span class="badge badge-info">{{ salaryPlan.incomeSources.length || 0 }} Sources</span>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Source</th>
+                    <th class="text-end">Planned Amount</th>
+                    <th class="text-end">% of Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let source of salaryPlan.incomeSources">
+                    <td class="font-weight-bold">{{ source.sourceName }}</td>
+                    <td class="text-end font-weight-bold text-primary">₹{{ source.plannedAmount.toLocaleString('en-IN') }}</td>
+                    <td class="text-end text-secondary small">{{ getPercentageOfIncome(source.plannedAmount) }}%</td>
+                  </tr>
+                  <tr *ngIf="salaryPlan.unallocatedCarryForward > 0" class="table-info">
+                    <td>
+                      <strong>Surplus Carry-Forward</strong>
+                      <span class="badge bg-info-subtle text-info ms-1">Carried</span>
+                    </td>
+                    <td class="text-end font-weight-bold text-info">₹{{ salaryPlan.unallocatedCarryForward.toLocaleString('en-IN') }}</td>
+                    <td class="text-end text-secondary small">{{ getPercentageOfIncome(salaryPlan.unallocatedCarryForward) }}%</td>
+                  </tr>
+                </tbody>
+                <tfoot class="table-light">
+                  <tr>
+                    <th>Total Available Income</th>
+                    <th class="text-end text-primary font-weight-bold">₹{{ salaryPlan.totalPlannedIncome.toLocaleString('en-IN') }}</th>
+                    <th class="text-end">100%</th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Allocations Summary by Classification -->
+      <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+          <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="m-0 font-weight-bold text-dark">Allocation Distribution</h5>
+            <span class="badge badge-secondary border">By Classification</span>
+          </div>
+          <div class="card-body">
+            <div class="row g-3 mb-3">
+              <div class="col-4">
+                <div class="p-2 border rounded text-center">
+                  <span class="text-secondary small d-block">Expenses</span>
+                  <strong class="text-dark">₹{{ salaryPlan.totalPlannedExpenses.toLocaleString('en-IN') }}</strong>
+                  <div class="text-secondary small">{{ getPercentageOfIncome(salaryPlan.totalPlannedExpenses) }}%</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="p-2 border rounded text-center">
+                  <span class="text-secondary small d-block">Savings</span>
+                  <strong class="text-success">₹{{ salaryPlan.totalPlannedSavings.toLocaleString('en-IN') }}</strong>
+                  <div class="text-secondary small">{{ getPercentageOfIncome(salaryPlan.totalPlannedSavings) }}%</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="p-2 border rounded text-center">
+                  <span class="text-secondary small d-block">Other</span>
+                  <strong class="text-secondary">₹{{ salaryPlan.totalPlannedOther.toLocaleString('en-IN') }}</strong>
+                  <div class="text-secondary small">{{ getPercentageOfIncome(salaryPlan.totalPlannedOther) }}%</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notes Section if Present -->
+            <div *ngIf="salaryPlan.notes" class="p-3 bg-light rounded border mt-3">
+              <span class="text-secondary small font-weight-bold d-block">Monthly Plan Notes:</span>
+              <p class="mb-0 text-dark small mt-1">{{ salaryPlan.notes }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Itemized Allocations Table -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="m-0 font-weight-bold text-dark">Itemized Category Allocations</h5>
+        <!-- Filter Tabs -->
+        <div class="btn-group btn-group-sm" role="group">
+          <button type="button" class="btn" [ngClass]="allocationFilter === 'ALL' ? 'btn-primary' : 'btn-outline-secondary'" (click)="allocationFilter = 'ALL'">
+            All ({{ salaryPlan.allocations.length || 0 }})
+          </button>
+          <button type="button" class="btn" [ngClass]="allocationFilter === 'EXPENSE' ? 'btn-primary' : 'btn-outline-secondary'" (click)="allocationFilter = 'EXPENSE'">
+            Expenses
+          </button>
+          <button type="button" class="btn" [ngClass]="allocationFilter === 'SAVINGS' ? 'btn-primary' : 'btn-outline-secondary'" (click)="allocationFilter = 'SAVINGS'">
+            Savings
+          </button>
+          <button type="button" class="btn" [ngClass]="allocationFilter === 'OTHER' ? 'btn-primary' : 'btn-outline-secondary'" (click)="allocationFilter = 'OTHER'">
+            Other
+          </button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Allocation Name</th>
+              <th>Classification</th>
+              <th>Linked Category</th>
+              <th class="text-end">Planned Amount</th>
+              <th class="text-end">% of Income</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of getAllocationsFiltered()">
+              <td class="font-weight-bold">{{ item.name }}</td>
+              <td>
+                <span class="badge" [ngClass]="getAllocationTypeBadgeClass(item.allocationType)">
+                  {{ item.allocationType }}
+                </span>
+              </td>
+              <td>
+                <span *ngIf="item.categoryId" class="badge bg-light text-dark border">
+                  {{ getCategoryName(item.categoryId) }}
+                </span>
+                <span *ngIf="!item.categoryId" class="text-muted small">—</span>
+              </td>
+              <td class="text-end font-weight-bold">₹{{ item.plannedAmount.toLocaleString('en-IN') }}</td>
+              <td class="text-end text-secondary small">{{ getPercentageOfIncome(item.plannedAmount) }}%</td>
+            </tr>
+            <tr *ngIf="getAllocationsFiltered().length === 0">
+              <td colspan="5" class="text-center text-muted py-4">
+                No allocation items found for this filter.
+              </td>
+            </tr>
+          </tbody>
+          <tfoot class="table-light">
+            <tr>
+              <th colspan="3">Total Planned Allocations</th>
+              <th class="text-end font-weight-bold">₹{{ salaryPlan.totalPlannedAllocations.toLocaleString('en-IN') }}</th>
+              <th class="text-end">{{ getPercentageOfIncome(salaryPlan.totalPlannedAllocations) }}%</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Optional Emergency Fund Milestone Banner -->
+    <div *ngIf="salaryPlan.emergencyFundTarget && salaryPlan.emergencyFundTarget > 0" class="card mb-4 emergency-fund-banner shadow-sm">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-md-7">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <div>
+                <h4 class="mb-0 font-weight-bold">Emergency Fund Goal Tracker</h4>
+                <p class="text-secondary small mb-0">
+                  Initial Reserve: ₹{{ (salaryPlan.initialEmergencyFundBalance || 0).toLocaleString('en-IN') }} | Cumulative Target: ₹{{ salaryPlan.emergencyFundTarget.toLocaleString('en-IN') }}
+                </p>
+              </div>
+            </div>
+            <!-- Progress Bar -->
+            <div class="progress my-3" style="height: 14px; border-radius: 9999px;">
+              <div class="progress-bar bg-gradient-success"
+                   [style.width.%]="salaryPlan.emergencyFundProgressPercentage">
+              </div>
+            </div>
+            <div class="d-flex justify-content-between text-secondary small">
+              <span><strong>{{ salaryPlan.emergencyFundProgressPercentage }}%</strong> Achieved</span>
+              <span>
+                <strong>₹{{ (salaryPlan.emergencyFundTarget - (salaryPlan.emergencyFundTotalBalance || 0) > 0 ? (salaryPlan.emergencyFundTarget - (salaryPlan.emergencyFundTotalBalance || 0)) : 0).toLocaleString('en-IN') }}</strong> remaining
+              </span>
+            </div>
+          </div>
+
+          <div class="col-md-5 text-md-end mt-3 mt-md-0 border-start-md ps-md-4">
+            <span class="text-secondary small text-uppercase font-weight-bold d-block">Current Reserve Balance</span>
+            <div class="display-6 font-weight-bold text-success my-1">
+              ₹{{ (salaryPlan.emergencyFundTotalBalance || 0).toLocaleString('en-IN') }}
+            </div>
+            <a routerLink="/savings-goals" class="btn btn-sm btn-outline-primary mt-1">
+              Manage Savings Goals →
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Planned vs Actual High-Level Financial Breakdown -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="m-0 font-weight-bold text-dark">
+          {{ monthNames[currentMonth - 1] }} {{ currentYear }} — Planned vs. Actual Comparison
+        </h5>
+        <span class="badge bg-light text-dark border">Persisted Transactions vs. Planned Target</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Financial Component</th>
+              <th>Monthly Plan</th>
+              <th>Actual Tracked</th>
+              <th>Variance (Impact)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div>
+                    <div class="font-weight-bold">Take-Home Income</div>
+                    <div class="text-secondary small">Total liquid net inflow</div>
+                  </div>
+                </div>
+              </td>
+              <td class="font-weight-bold">₹{{ salaryPlan.totalPlannedIncome.toLocaleString('en-IN') }}</td>
+              <td class="font-weight-bold text-primary">₹{{ salaryPlan.actualIncome.toLocaleString('en-IN') }}</td>
+              <td>
+                <span class="font-weight-bold" [ngClass]="salaryPlan.incomeVariance >= 0 ? 'text-success' : 'text-danger'">
+                  {{ salaryPlan.incomeVariance >= 0 ? '+' : '' }}₹{{ salaryPlan.incomeVariance.toLocaleString('en-IN') }}
+                </span>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="salaryPlan.actualIncome >= salaryPlan.totalPlannedIncome ? 'bg-success' : 'bg-warning text-dark'">
+                  {{ salaryPlan.actualIncome >= salaryPlan.totalPlannedIncome ? 'Target Met' : 'Pending Inflow' }}
+                </span>
+              </td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div>
+                    <div class="font-weight-bold">Living Expenses & Bills</div>
+                    <div class="text-secondary small">Living costs, rent, utilities, food</div>
+                  </div>
+                </div>
+              </td>
+              <td class="font-weight-bold">₹{{ salaryPlan.totalPlannedExpenses.toLocaleString('en-IN') }}</td>
+              <td class="font-weight-bold" [class.text-danger]="salaryPlan.actualExpenses > salaryPlan.totalPlannedExpenses">
+                ₹{{ salaryPlan.actualExpenses.toLocaleString('en-IN') }}
+              </td>
+              <td>
+                <span class="font-weight-bold" [ngClass]="salaryPlan.expenseVariance >= 0 ? 'text-success' : 'text-danger'">
+                  {{ salaryPlan.expenseVariance >= 0 ? '₹' + salaryPlan.expenseVariance.toLocaleString('en-IN') + ' Saved' : '₹' + (-salaryPlan.expenseVariance).toLocaleString('en-IN') + ' Over' }}
+                </span>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="salaryPlan.actualExpenses <= salaryPlan.totalPlannedExpenses ? 'bg-success' : 'bg-danger'">
+                  {{ salaryPlan.actualExpenses <= salaryPlan.totalPlannedExpenses ? 'Within Budget' : 'Over Budget' }}
+                </span>
+              </td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div>
+                    <div class="font-weight-bold">Savings Allocation</div>
+                    <div class="text-secondary small">Direct transfer to savings goals</div>
+                  </div>
+                </div>
+              </td>
+              <td class="font-weight-bold">₹{{ salaryPlan.totalPlannedSavings.toLocaleString('en-IN') }}</td>
+              <td class="font-weight-bold text-success">₹{{ salaryPlan.actualEmergencyFund.toLocaleString('en-IN') }}</td>
+              <td>
+                <span class="font-weight-bold text-success">
+                  {{ salaryPlan.actualEmergencyFund >= salaryPlan.totalPlannedSavings ? 'Goal Achieved' : 'In Progress' }}
+                </span>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="salaryPlan.actualEmergencyFund >= salaryPlan.totalPlannedSavings ? 'bg-success' : 'bg-secondary'">
+                  {{ salaryPlan.actualEmergencyFund >= salaryPlan.totalPlannedSavings ? 'Met ✓' : 'In Progress' }}
+                </span>
+              </td>
+            </tr>
+
+            <tr class="table-active">
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="comp-icon bg-dark text-white">💰</span>
+                  <div>
+                    <div class="font-weight-bold">Monthly Net Buffer / Cushion</div>
+                    <div class="text-secondary small">Remaining unallocated liquid buffer</div>
+                  </div>
+                </div>
+              </td>
+              <td class="font-weight-bold" [ngClass]="salaryPlan.calculatedBuffer >= 0 ? 'text-primary' : 'text-danger'">
+                ₹{{ salaryPlan.calculatedBuffer.toLocaleString('en-IN') }}
+              </td>
+              <td class="font-weight-bold text-success">₹{{ salaryPlan.actualNetSavings.toLocaleString('en-IN') }} (Actual Net)</td>
+              <td colspan="2" class="text-secondary small">
+                {{ salaryPlan.calculatedBuffer >= 0 ? 'Available cushion for unplanned needs or extra savings' : 'Budget deficit' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: Edit / Create Salary Plan ================= -->
+<div *ngIf="showPlanModal" class="modal-backdrop-custom animate-fade-in">
+  <div class="modal-card modal-lg-custom">
+    <div class="modal-header d-flex justify-content-between align-items-center">
+      <h4 class="m-0 font-weight-bold">
+        {{ salaryPlan?.isConfigured ? 'Edit' : 'Create' }} Salary Plan ({{ monthNames[currentMonth - 1] }} {{ currentYear }})
+      </h4>
+      <button class="btn-close" (click)="closePlanModal()"></button>
+    </div>
+
+    <div class="modal-body">
+      <form [formGroup]="planForm" (ngSubmit)="savePlan()">
+        <p class="text-secondary small mb-3">
+          Configure expected income sources and category allocations. You can set any planned amount (including zero) and save even if allocations exceed income.
+        </p>
+
+        <!-- SECTION 1: Income Sources -->
+        <div class="config-section mb-4 p-3 border rounded bg-light-subtle">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0 font-weight-bold text-dark">1. Expected Income Sources</h5>
+            <button type="button" class="btn btn-sm btn-outline-primary" (click)="addIncomeSource()">
+              + Add Income Source
+            </button>
+          </div>
+          <p class="text-secondary small mb-3">Add all anticipated net inflows (Salary, Freelance, Rental, Dividends, etc.).</p>
+
+          <div formArrayName="incomeSources">
+            <div *ngFor="let sourceCtrl of incomeSourcesArray.controls; let i = index" [formGroupName]="i" class="row g-2 mb-2 align-items-center">
+              <div class="col-7 col-md-7">
+                <input type="text" class="form-control form-control-sm" formControlName="sourceName" placeholder="e.g. Primary Salary" />
+              </div>
+              <div class="col-4 col-md-4">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">₹</span>
+                  <input type="number" class="form-control form-control-sm" formControlName="plannedAmount" placeholder="0" min="0" />
+                </div>
+              </div>
+              <div class="col-1 col-md-1 text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeIncomeSource(i)" [disabled]="incomeSourcesArray.length === 1" title="Remove income source">
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carry-Forward Surplus -->
+          <div class="row g-2 mt-2 pt-2 border-top align-items-center">
+            <div class="col-7 col-md-7">
+              <label class="form-label mb-0 small text-secondary font-weight-bold">Carry-Forward Surplus from Prior Month (Optional):</label>
+            </div>
+            <div class="col-4 col-md-4">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text">₹</span>
+                <input type="number" class="form-control form-control-sm" formControlName="unallocatedCarryForward" placeholder="0" min="0" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Income Subtotal -->
+          <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+            <span class="font-weight-bold small">Total Planned Available Income:</span>
+            <span class="font-weight-bold text-primary">₹{{ getLiveTotalIncome().toLocaleString('en-IN') }}</span>
+          </div>
+        </div>
+
+        <!-- SECTION 2: Category Allocations -->
+        <div class="config-section mb-4 p-3 border rounded bg-light-subtle">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <h5 class="mb-0 font-weight-bold text-dark">2. Budget Allocations</h5>
+            <div class="d-flex gap-2">
+              <button *ngIf="categories.length > 0" type="button" class="btn btn-sm btn-outline-secondary" (click)="populateFromCategories()" title="Import active categories as allocation rows">
+                ⚡ Populate from Categories
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="addAllocation()">
+                + Add Allocation Item
+              </button>
+            </div>
+          </div>
+          <p class="text-secondary small mb-3">
+            Allocate your income across Expenses, Savings, or Other planning items.
+          </p>
+
+          <div formArrayName="allocations">
+            <div *ngFor="let allocCtrl of allocationsArray.controls; let i = index" [formGroupName]="i" class="row g-2 mb-2 align-items-center">
+              <div class="col-12 col-md-4">
+                <input type="text" class="form-control form-control-sm" formControlName="name" placeholder="Item Name (e.g. Groceries)" />
+              </div>
+              <div class="col-6 col-md-3">
+                <select class="form-select form-select-sm" formControlName="allocationType">
+                  <option value="EXPENSE">Expense</option>
+                  <option value="SAVINGS">Savings</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div class="col-6 col-md-2">
+                <select class="form-select form-select-sm" formControlName="categoryId" (change)="onCategorySelected(i, $event)">
+                  <option [ngValue]="null">No Category</option>
+                  <option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</option>
+                </select>
+              </div>
+              <div class="col-10 col-md-2">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">₹</span>
+                  <input type="number" class="form-control form-control-sm" formControlName="plannedAmount" placeholder="0" min="0" />
+                </div>
+              </div>
+              <div class="col-2 col-md-1 text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeAllocation(i)" title="Remove item">
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="allocationsArray.length === 0" class="text-center py-3 text-muted small">
+            No allocations added yet. Click "+ Add Allocation Item" or "⚡ Populate from Categories".
+          </div>
+
+          <!-- Allocations Breakdown Live Preview -->
+          <div class="row g-2 mt-3 pt-2 border-top text-secondary small">
+            <div class="col-4">Expenses: <strong>₹{{ getLiveAllocationsByType('EXPENSE').toLocaleString('en-IN') }}</strong></div>
+            <div class="col-4">Savings: <strong>₹{{ getLiveAllocationsByType('SAVINGS').toLocaleString('en-IN') }}</strong></div>
+            <div class="col-4 text-end">Total: <strong class="text-dark">₹{{ getLiveTotalAllocations().toLocaleString('en-IN') }}</strong></div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: Live Buffer Preview Banner -->
+        <div class="alert py-2 mb-3" [ngClass]="getLiveBuffer() >= 0 ? 'alert-info' : 'alert-warning'">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ getLiveBuffer() >= 0 ? 'Remaining Cushion Buffer:' : 'Allocations Exceed Income By:' }}</strong>
+              <div class="small text-muted" *ngIf="getLiveBuffer() < 0">
+                You can still save this plan. Over-allocations are permitted and will be flagged as an advisory warning.
+              </div>
+            </div>
+            <div class="h5 mb-0 font-weight-bold" [ngClass]="getLiveBuffer() >= 0 ? 'text-success' : 'text-danger'">
+              ₹{{ (getLiveBuffer() >= 0 ? getLiveBuffer() : -getLiveBuffer()).toLocaleString('en-IN') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 4: Optional Emergency Reserve Goal -->
+        <div class="mb-3 p-3 border rounded bg-light-subtle">
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="trackEmergencyFund" formControlName="trackEmergencyFund">
+            <label class="form-check-label font-weight-bold" for="trackEmergencyFund">
+              Track an Emergency Reserve Goal this month (Optional)
+            </label>
+          </div>
+          <div *ngIf="planForm.get('trackEmergencyFund')?.value" class="row g-2 mt-2 animate-fade-in">
+            <div class="col-6">
+              <label class="form-label small">Target Reserve (₹)</label>
+              <input type="number" class="form-control form-control-sm" formControlName="emergencyFundTarget" placeholder="100000" min="0" />
+            </div>
+            <div class="col-6">
+              <label class="form-label small">Initial Balance (₹)</label>
+              <input type="number" class="form-control form-control-sm" formControlName="initialEmergencyFundBalance" placeholder="0" min="0" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="form-group mb-3">
+          <label class="form-label small font-weight-bold">Plan Notes (Optional)</label>
+          <input type="text" class="form-control form-control-sm" formControlName="notes" placeholder="Notes for this month's budget" />
+        </div>
+
+        <!-- Modal Footer Actions -->
+        <div class="modal-actions d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+          <button type="button" class="btn btn-secondary" (click)="closePlanModal()" [disabled]="savingPlan">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="savingPlan">
+            {{ savingPlan ? 'Saving...' : 'Save Plan' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: Copy Plan from Prior Month ================= -->
+<div *ngIf="showCopyModal" class="modal-backdrop-custom animate-fade-in">
+  <div class="modal-card">
+    <div class="modal-header d-flex justify-content-between align-items-center">
+      <h4 class="m-0 font-weight-bold">Copy Monthly Plan</h4>
+      <button class="btn-close" (click)="closeCopyModal()"></button>
+    </div>
+    <div class="modal-body">
+      <form [formGroup]="copyForm" (ngSubmit)="executeCopyPlan()">
+        <p class="text-secondary small mb-3">
+          Duplicate income sources and category allocations from another month into <strong>{{ monthNames[currentMonth - 1] }} {{ currentYear }}</strong>.
+        </p>
+
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label small font-weight-bold">Source Month *</label>
+            <select class="form-select" formControlName="fromMonth">
+              <option *ngFor="let m of monthNames; let i = index" [ngValue]="i + 1">{{ m }}</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label small font-weight-bold">Source Year *</label>
+            <select class="form-select" formControlName="fromYear">
+              <option *ngFor="let y of availableYears" [ngValue]="y">{{ y }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" id="carryForwardUnallocated" formControlName="carryForwardUnallocated">
+          <label class="form-check-label small" for="carryForwardUnallocated">
+            <strong>Carry forward unallocated surplus</strong> from source month as additional available income.
+          </label>
+        </div>
+
+        <div class="alert alert-secondary small py-2 mb-3">
+          Note: Existing plan targets for {{ monthNames[currentMonth - 1] }} {{ currentYear }} will be replaced. Actual transactions and history are never modified.
+        </div>
+
+        <div class="modal-actions d-flex justify-content-end gap-2 mt-4">
+          <button type="button" class="btn btn-secondary" (click)="closeCopyModal()" [disabled]="copyingPlan">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="copyingPlan">
+            {{ copyingPlan ? 'Copying...' : 'Copy Plan' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: Delete Plan Confirmation ================= -->
+<div *ngIf="showDeleteConfirmModal" class="modal-backdrop-custom animate-fade-in">
+  <div class="modal-card">
+    <div class="modal-header d-flex justify-content-between align-items-center">
+      <h4 class="m-0 font-weight-bold text-danger">Delete Budget Plan</h4>
+      <button class="btn-close" (click)="closeDeleteConfirmModal()"></button>
+    </div>
+    <div class="modal-body">
+      <p>
+        Are you sure you want to delete the budget plan for <strong>{{ monthNames[currentMonth - 1] }} {{ currentYear }}</strong>?
+      </p>
+      <div class="alert alert-info small py-2 mb-3">
+        <strong>Safety Guarantee:</strong> Deleting this plan only removes your configured targets for this month. All of your actual transactions and financial history remain completely intact.
+      </div>
+      <div class="modal-actions d-flex justify-content-end gap-2 mt-4">
+        <button type="button" class="btn btn-secondary" (click)="closeDeleteConfirmModal()" [disabled]="deletingPlan">Cancel</button>
+        <button type="button" class="btn btn-danger" (click)="executeDeletePlan()" [disabled]="deletingPlan">
+          {{ deletingPlan ? 'Deleting...' : 'Yes, Delete Plan' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

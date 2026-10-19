@@ -1,0 +1,222 @@
+/* ==========================================================================
+   Transactions Ledger Styles
+   ========================================================================== */
+
+/* Summary Cards Grid */
+.summary-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.summary-stat-card {
+  background-color: var(--bg-surface);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--slate-200);
+  box-shadow: var(--shadow-xs);
+}
+
+.summary-stat-card.border-income {
+  border-left: 4px solid var(--income);
+}
+
+.summary-stat-card.border-expense {
+  border-left: 4px solid var(--expense);
+}
+
+.summary-stat-card.border-neutral {
+  border-left: 4px solid var(--primary);
+}
+
+.summary-label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--slate-500);
+  font-weight: 600;
+  display: block;
+}
+
+.summary-val {
+  margin: var(--space-1) 0;
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.summary-subtext {
+  font-size: var(--fs-xs);
+  color: var(--slate-500);
+}
+
+/* Date Presets */
+.date-presets-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.presets-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--slate-500);
+}
+
+.preset-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.preset-pill {
+  padding: 4px 10px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  background-color: var(--slate-100);
+  color: var(--slate-700);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-pill:hover {
+  background-color: var(--slate-200);
+  color: var(--slate-900);
+}
+
+.preset-pill.active {
+  background-color: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+.custom-date-container {
+  padding: var(--space-3);
+  background-color: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+}
+
+/* Filter Grid */
+.filter-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr;
+  gap: var(--space-3);
+}
+
+.desc-cell {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.action-buttons {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+/* Print Handling */
+.print-only-header {
+  display: none;
+}
+
+@media print {
+  .no-print,
+  .app-header,
+  .page-header-content {
+    display: none !important;
+  }
+
+  .print-only-header {
+    display: block !important;
+  }
+
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .summary-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile Compact Summary Strip */
+.mobile-summary-strip {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-2);
+  box-shadow: var(--shadow-xs);
+}
+
+.mobile-stat-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+
+.mobile-stat-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.mobile-stat-val {
+  font-size: var(--fs-base);
+  font-weight: 700;
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+.mobile-stat-divider {
+  width: 1px;
+  height: 28px;
+  background-color: var(--border-color);
+}
+
+@media (max-width: 767px) {
+  .preset-pills {
+    display: flex;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    gap: 6px;
+  }
+
+  .preset-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .preset-pill {
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 36px;
+    padding: 6px 14px;
+    font-size: var(--fs-xs);
+  }
+}
+

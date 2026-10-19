@@ -1,0 +1,1182 @@
+<div class="splitwise-container page-container animate-fade-in">
+
+  <!-- Toast Notification -->
+  <div class="splitwise-toast" *ngIf="toastMessage" [ngClass]="'toast-' + toastType">
+    <div class="toast-content">
+      <span class="toast-icon" *ngIf="toastType === 'success'">✓</span>
+      <span class="toast-icon" *ngIf="toastType === 'error'">✕</span>
+      <span class="toast-icon" *ngIf="toastType === 'info'">ℹ</span>
+      <span>{{ toastMessage }}</span>
+    </div>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h1 class="page-title mb-1">Splitwise &amp; Group Bills</h1>
+      <p class="page-subtitle text-secondary mb-0">Split expenses with friends, track balances, and 1-tap sync to your ledger</p>
+    </div>
+    <div class="header-actions d-flex align-items-center gap-2">
+      <button type="button" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 shadow-sm" (click)="openContactsModal('general')" title="Open Contacts Book">
+        <span>📇</span>
+        <span>Contacts</span>
+      </button>
+      <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-2" (click)="openAddGroup()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>New Group</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Group Switcher Carousel / Tabs -->
+  <div class="group-switcher-wrapper mb-3" *ngIf="groups.length > 0">
+    <div class="group-tabs">
+      <button
+        *ngFor="let g of groups"
+        type="button"
+        class="group-tab-btn"
+        [class.active]="selectedGroupId === g.id"
+        (click)="selectGroup(g)">
+        <span class="group-icon">{{ getGroupTypeIcon(g.groupType) }}</span>
+        <span class="group-name">{{ g.name }}</span>
+        <span
+          *ngIf="g.netBalanceForCurrentUser !== 0"
+          class="group-net-badge"
+          [class.badge-positive]="g.netBalanceForCurrentUser > 0"
+          [class.badge-negative]="g.netBalanceForCurrentUser < 0">
+          {{ g.netBalanceForCurrentUser > 0 ? '+' : '' }}₹{{ g.netBalanceForCurrentUser | number:'1.0-0' }}
+        </span>
+      </button>
+      <button type="button" class="group-tab-btn add-tab-btn" (click)="openAddGroup()">
+        + Group
+      </button>
+    </div>
+  </div>
+
+  <!-- Empty State (No Groups) -->
+  <div class="card empty-state-card text-center p-5 mb-4" *ngIf="groups.length === 0 && !isLoading">
+    <div class="empty-icon-circle mx-auto mb-3">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+      </svg>
+    </div>
+    <h3 class="fw-bold mb-2">No Split Groups Yet</h3>
+    <p class="text-secondary max-w-md mx-auto mb-4">
+      Planning a trip, sharing rent with flatmates, or dining out with friends? Create a group to split bills equally or custom, track who owes who, and 1-tap sync your personal share into your expense ledger.
+    </p>
+    <button type="button" class="btn btn-primary px-4 py-2" (click)="openAddGroup()">
+      + Create Your First Group
+    </button>
+  </div>
+
+  <!-- Main Content When Group Selected -->
+  <div *ngIf="selectedGroup">
+
+    <!-- Hero Balance Card -->
+    <div class="hero-balance-card card mb-4">
+      <div class="hero-header d-flex justify-content-between align-items-start gap-2">
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="fs-5">{{ getGroupTypeIcon(selectedGroup.groupType) }}</span>
+            <span class="group-badge">{{ selectedGroup.groupType }}</span>
+            <span class="text-secondary small">&bull; {{ selectedGroup.members.length || 0 }} Members</span>
+          </div>
+          <h2 class="hero-group-title mb-0">{{ selectedGroup.name }}</h2>
+          <p class="text-secondary small mb-0" *ngIf="selectedGroup.description">{{ selectedGroup.description }}</p>
+        </div>
+        <div class="hero-header-actions d-flex gap-2">
+          <button type="button" class="btn btn-subtle-icon" (click)="openAddMember()" title="Add Member" aria-label="Add Member">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <line x1="20" y1="8" x2="20" y2="14"></line>
+              <line x1="23" y1="11" x2="17" y2="11"></line>
+            </svg>
+          </button>
+          <button type="button" class="btn btn-subtle-icon text-danger" (click)="confirmDeleteGroup()" title="Delete Group" aria-label="Delete Group">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Net Headline Banner -->
+      <div class="hero-headline-banner mt-3" [ngClass]="{
+        'headline-positive': (balanceSummary?.userNetBalance || 0) > 0.01,
+        'headline-negative': (balanceSummary?.userNetBalance || 0) < -0.01,
+        'headline-neutral': (balanceSummary?.userNetBalance || 0) >= -0.01 && (balanceSummary?.userNetBalance || 0) <= 0.01
+      }">
+        <div class="headline-content">
+          <div class="headline-label">Your Net Balance in Group</div>
+          <div class="headline-val">{{ balanceSummary?.userStatusHeadline || 'Calculating...' }}</div>
+        </div>
+        <div class="headline-icon" *ngIf="(balanceSummary?.userNetBalance || 0) > 0.01">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+            <polyline points="17 6 23 6 23 12"></polyline>
+          </svg>
+        </div>
+        <div class="headline-icon" *ngIf="(balanceSummary?.userNetBalance || 0) < -0.01">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+            <polyline points="17 18 23 18 23 12"></polyline>
+          </svg>
+        </div>
+        <div class="headline-icon" *ngIf="(balanceSummary?.userNetBalance || 0) >= -0.01 && (balanceSummary?.userNetBalance || 0) <= 0.01">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Strip -->
+      <div class="hero-metrics-strip mt-3">
+        <div class="metric-item">
+          <span class="metric-label">Group Spending</span>
+          <span class="metric-num">₹{{ balanceSummary?.totalGroupSpending || 0 | number:'1.2-2' }}</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">You Paid</span>
+          <span class="metric-num">₹{{ balanceSummary?.userTotalPaid || 0 | number:'1.2-2' }}</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Your Share</span>
+          <span class="metric-num">₹{{ balanceSummary?.userTotalShare || 0 | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <!-- Primary Action Buttons -->
+      <div class="hero-actions mt-3 d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-ai-split flex-fill d-flex align-items-center justify-content-center gap-2 py-2" (click)="openAiSplitModal()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+          </svg>
+          <span class="fw-semibold">⚡ AI Bill Split</span>
+        </button>
+        <button type="button" class="btn btn-primary flex-fill d-flex align-items-center justify-content-center gap-2 py-2" (click)="openAddExpense()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Add Expense</span>
+        </button>
+        <button type="button" class="btn btn-secondary flex-fill d-flex align-items-center justify-content-center gap-2 py-2" (click)="openSettleModal()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+            <line x1="2" y1="10" x2="22" y2="10"></line>
+          </svg>
+          <span>Settle Up</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Sub-Tabs -->
+    <div class="sub-tabs-container mb-3">
+      <div class="sub-tabs card d-flex flex-row p-1">
+        <button
+          type="button"
+          class="sub-tab-btn flex-fill"
+          [class.active]="activeTab === 'expenses'"
+          (click)="activeTab = 'expenses'">
+          Expenses ({{ expenses.length }})
+        </button>
+        <button
+          type="button"
+          class="sub-tab-btn flex-fill"
+          [class.active]="activeTab === 'balances'"
+          (click)="activeTab = 'balances'">
+          Balances &amp; Debts
+        </button>
+        <button
+          type="button"
+          class="sub-tab-btn flex-fill"
+          [class.active]="activeTab === 'settlements'"
+          (click)="activeTab = 'settlements'">
+          Settlements ({{ settlements.length }})
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TAB 1: Expenses Feed -->
+    <!-- ============================================== -->
+    <div *ngIf="activeTab === 'expenses'" class="tab-pane animate-fade-in">
+      <div class="expenses-feed">
+        <div *ngIf="expenses.length === 0" class="card text-center p-5">
+          <p class="text-secondary mb-3">No expenses recorded in this group yet.</p>
+          <button type="button" class="btn btn-primary btn-sm mx-auto" (click)="openAddExpense()">
+            + Add First Expense
+          </button>
+        </div>
+
+        <div *ngFor="let exp of expenses" class="card expense-card mb-3">
+          <div class="expense-card-header d-flex justify-content-between align-items-start">
+            <div class="d-flex align-items-center gap-2">
+              <span class="expense-date-badge">{{ exp.expenseDate | date:'MMM d' }}</span>
+              <span class="expense-category-pill" *ngIf="exp.categoryName">{{ exp.categoryName }}</span>
+              <span class="expense-split-method">{{ exp.splitMethod }}</span>
+            </div>
+            <button type="button" class="btn-subtle-delete" (click)="deleteExpense(exp)" title="Delete expense" aria-label="Delete expense">
+              &times;
+            </button>
+          </div>
+
+          <div class="expense-main-row d-flex justify-content-between align-items-center mt-2">
+            <div>
+              <h3 class="expense-title mb-0">{{ exp.title }}</h3>
+              <p class="expense-payer-info text-secondary small mb-0">
+                <span class="fw-semibold">{{ exp.paidByMemberName }}</span> paid ₹{{ exp.totalAmount | number:'1.2-2' }}
+              </p>
+              <p class="expense-notes text-secondary small mb-0" *ngIf="exp.notes">{{ exp.notes }}</p>
+            </div>
+            <div class="text-end">
+              <div class="expense-net-badge" [ngClass]="{
+                'badge-positive': exp.userNetEffect > 0,
+                'badge-negative': exp.userNetEffect < 0,
+                'badge-neutral': exp.userNetEffect === 0
+              }">
+                <span *ngIf="exp.userNetEffect > 0">you lent ₹{{ exp.userNetEffect | number:'1.2-2' }}</span>
+                <span *ngIf="exp.userNetEffect < 0">you owe ₹{{ exp.userShareAmount | number:'1.2-2' }}</span>
+                <span *ngIf="exp.userNetEffect === 0">not involved</span>
+              </div>
+              <div class="text-secondary small mt-1">Your share: ₹{{ exp.userShareAmount | number:'1.2-2' }}</div>
+            </div>
+          </div>
+
+          <!-- Shares Breakdown (Collapsible / Preview) -->
+          <div class="expense-shares-list mt-3 pt-2 border-top">
+            <div class="shares-chips d-flex flex-wrap gap-2">
+              <span *ngFor="let s of exp.shares" class="share-chip">
+                {{ s.memberName }}: ₹{{ s.owedAmount | number:'1.2-2' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 1-Tap Ledger Sync Action Footer -->
+          <div class="expense-action-footer mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
+            <div *ngIf="exp.syncedToLedger" class="synced-badge d-flex align-items-center gap-1">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Synced to Personal Ledger</span>
+            </div>
+            <div *ngIf="!exp.syncedToLedger">
+              <button type="button" class="btn btn-sync-ledger d-flex align-items-center gap-1" (click)="syncToLedger(exp)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                <span>Sync my share (₹{{ exp.userShareAmount | number:'1.2-2' }}) to Ledger</span>
+              </button>
+            </div>
+            <span class="text-secondary small">{{ exp.createdAt | date:'shortTime' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TAB 2: Balances & Simplified Debts -->
+    <!-- ============================================== -->
+    <div *ngIf="activeTab === 'balances'" class="tab-pane animate-fade-in">
+
+      <!-- How to Settle Up (Simplified Debts) -->
+      <div class="card mb-4">
+        <div class="card-header-clean">
+          <div class="d-flex align-items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-teal">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            <h3 class="card-section-title mb-0">Simplified Settlement Plan</h3>
+          </div>
+          <p class="text-secondary small mb-0 mt-1">Smart minimum-transfer debt simplification</p>
+        </div>
+
+        <div class="settle-transfers-list mt-3">
+          <div *ngIf="!balanceSummary || balanceSummary.simplifiedDebts.length === 0" class="text-center py-4 text-secondary">
+            All debts in this group are completely settled up! 🎉
+          </div>
+
+          <div *ngFor="let debt of balanceSummary?.simplifiedDebts" class="debt-transfer-item card mb-2 p-3 d-flex flex-row justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-3">
+              <div class="debt-avatar-pair">
+                <span class="avatar-from">{{ debt.fromMemberName.charAt(0) }}</span>
+                <span class="avatar-arrow">&rarr;</span>
+                <span class="avatar-to">{{ debt.toMemberName.charAt(0) }}</span>
+              </div>
+              <div>
+                <div class="fw-semibold text-slate-900">{{ debt.narrative }}</div>
+                <div class="text-secondary small" *ngIf="debt.fromCurrentUser">You need to pay</div>
+                <div class="text-secondary small" *ngIf="debt.toCurrentUser">You are owed</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn btn-sm btn-primary flex-shrink-0"
+              (click)="openSettleModal({ fromId: debt.fromMemberId, toId: debt.toMemberId, amount: debt.amount })">
+              Settle ₹{{ debt.amount | number:'1.0-0' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Member Balances Breakdown -->
+      <div class="card mb-4">
+        <div class="card-header-clean d-flex justify-content-between align-items-center">
+          <div>
+            <h3 class="card-section-title mb-0">Group Member Balances</h3>
+            <p class="text-secondary small mb-0">Total paid vs individual consumption</p>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="openAddMember()">
+            + Add Friend
+          </button>
+        </div>
+
+        <div class="members-balance-list mt-3">
+          <div *ngFor="let m of balanceSummary?.memberBalances" class="member-balance-row d-flex justify-content-between align-items-center py-3 border-bottom">
+            <div class="d-flex align-items-center gap-3">
+              <div class="member-avatar">
+                {{ m.name.charAt(0).toUpperCase() }}
+              </div>
+              <div>
+                <div class="fw-semibold text-slate-900 d-flex align-items-center gap-2">
+                  <span>{{ m.name }}</span>
+                  <span class="badge badge-teal-subtle" *ngIf="m.currentUser">You</span>
+                </div>
+                <div class="text-secondary small">
+                  Paid: ₹{{ m.totalPaid || 0 | number:'1.2-2' }} &bull; Share: ₹{{ m.totalOwed || 0 | number:'1.2-2' }}
+                </div>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="net-val fw-bold" [ngClass]="{
+                'text-income': (m.netBalance || 0) > 0.01,
+                'text-expense': (m.netBalance || 0) < -0.01,
+                'text-muted': (m.netBalance || 0) >= -0.01 && (m.netBalance || 0) <= 0.01
+              }">
+                {{ (m.netBalance || 0) > 0.01 ? '+' : '' }}₹{{ m.netBalance || 0 | number:'1.2-2' }}
+              </div>
+              <div class="text-secondary small">
+                {{ (m.netBalance || 0) > 0.01 ? 'gets back' : ((m.netBalance || 0) < -0.01 ? 'owes' : 'settled') }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TAB 3: Settlements History -->
+    <!-- ============================================== -->
+    <div *ngIf="activeTab === 'settlements'" class="tab-pane animate-fade-in">
+      <div class="card">
+        <div class="card-header-clean d-flex justify-content-between align-items-center">
+          <h3 class="card-section-title mb-0">Settlement Payments</h3>
+          <button type="button" class="btn btn-primary btn-sm" (click)="openSettleModal()">
+            + Record Settlement
+          </button>
+        </div>
+
+        <div class="settlements-feed mt-3">
+          <div *ngIf="settlements.length === 0" class="text-center py-4 text-secondary">
+            No settlements recorded yet in this group.
+          </div>
+
+          <div *ngFor="let s of settlements" class="settlement-item py-3 border-bottom d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+              <div class="settlement-icon-circle">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <div>
+                <div class="fw-semibold text-slate-900">{{ s.narrative }}</div>
+                <div class="text-secondary small">
+                  {{ s.settlementDate | date:'mediumDate' }}
+                  <span *ngIf="s.notes"> &bull; {{ s.notes }}</span>
+                  <span *ngIf="s.recordedInLedger" class="badge badge-teal-subtle ms-2">In Ledger</span>
+                </div>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="fw-bold text-teal">₹{{ s.amount | number:'1.2-2' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: Add Split Group -->
+  <!-- ============================================== -->
+  <div class="modal-backdrop" *ngIf="showAddGroupModal" (click)="showAddGroupModal = false">
+    <div class="modal-card bottom-sheet animate-slide-up" (click)="$event.stopPropagation()">
+      <div class="modal-header d-flex justify-content-between align-items-center pb-3 border-bottom">
+        <h3 class="modal-title mb-0">Create Split Group</h3>
+        <button type="button" class="btn-close" (click)="showAddGroupModal = false" aria-label="Close"></button>
+      </div>
+      <div class="modal-body py-3">
+        <div class="form-group mb-3">
+          <label class="form-label">Group Name *</label>
+          <input
+            type="text"
+            class="form-control"
+            placeholder="e.g. Goa Trip 2026, Flat 402, Team Lunch"
+            [(ngModel)]="newGroup.name">
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label">Group Type</label>
+          <div class="group-type-selector d-flex gap-2">
+            <button
+              type="button"
+              class="type-btn"
+              [class.active]="newGroup.groupType === 'TRIP'"
+              (click)="newGroup.groupType = 'TRIP'">
+              ✈️ Trip
+            </button>
+            <button
+              type="button"
+              class="type-btn"
+              [class.active]="newGroup.groupType === 'HOME'"
+              (click)="newGroup.groupType = 'HOME'">
+              🏠 Flat/Home
+            </button>
+            <button
+              type="button"
+              class="type-btn"
+              [class.active]="newGroup.groupType === 'OFFICE'"
+              (click)="newGroup.groupType = 'OFFICE'">
+              🏢 Office
+            </button>
+            <button
+              type="button"
+              class="type-btn"
+              [class.active]="newGroup.groupType === 'OTHER'"
+              (click)="newGroup.groupType = 'OTHER'">
+              👥 Other
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label mb-0">Initial Members / Friends</label>
+            <button
+              type="button"
+              class="btn-phonebook-link"
+              (click)="openContactsModal('addGroup')"
+              title="Pick from Contacts Book">
+              📇 Contacts
+            </button>
+          </div>
+          <div class="input-with-phonebook position-relative">
+            <input
+              type="text"
+              class="form-control pe-5"
+              placeholder="Enter friend names or pick from contacts (e.g. Rahul, Priya)"
+              [(ngModel)]="memberNamesInput">
+            <button
+              type="button"
+              class="btn-phonebook-addon"
+              (click)="openContactsModal('addGroup')"
+              title="Pick from Contacts Book"
+              aria-label="Open Contacts Book">
+              📇
+            </button>
+          </div>
+          <small class="text-secondary d-block mt-1">You will be automatically added as the primary member.</small>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label">Description (Optional)</label>
+          <input
+            type="text"
+            class="form-control"
+            placeholder="e.g. Shared expenses for hotel, travel and food"
+            [(ngModel)]="newGroup.description">
+        </div>
+      </div>
+      <div class="modal-footer pt-3 border-top d-flex gap-2">
+        <button type="button" class="btn btn-secondary flex-fill" (click)="showAddGroupModal = false">Cancel</button>
+        <button type="button" class="btn btn-primary flex-fill" (click)="submitAddGroup()" [disabled]="!newGroup.name.trim() || isLoading">
+          Create Group
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: Add Expense -->
+  <!-- ============================================== -->
+  <div class="modal-backdrop" *ngIf="showAddExpenseModal" (click)="showAddExpenseModal = false">
+    <div class="modal-card bottom-sheet animate-slide-up" (click)="$event.stopPropagation()">
+      <div class="modal-header d-flex justify-content-between align-items-center pb-3 border-bottom">
+        <h3 class="modal-title mb-0">Add Split Expense</h3>
+        <button type="button" class="btn-close" (click)="showAddExpenseModal = false" aria-label="Close"></button>
+      </div>
+      <div class="modal-body py-3 max-h-drawer">
+        <!-- AI Assistant Callout -->
+        <div class="ai-receipt-callout mb-3 p-3 rounded-lg d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <span class="fs-4">🧾</span>
+            <div>
+              <div class="fw-semibold text-teal small">Have a bill or receipt?</div>
+              <div class="text-secondary smaller">Let Gemini AI itemize dishes and calculate each person's exact share automatically.</div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-primary-subtle fw-semibold d-flex align-items-center gap-1" (click)="showAddExpenseModal = false; openAiSplitModal()">
+            <span>⚡ Use AI</span>
+          </button>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label">Expense Title *</label>
+          <input
+            type="text"
+            class="form-control"
+            placeholder="e.g. Seafood Dinner, Airbnb, Fuel"
+            [(ngModel)]="newExpense.title">
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-6">
+            <label class="form-label">Total Amount (₹) *</label>
+            <input
+              type="number"
+              class="form-control font-tabular fs-5 fw-bold"
+              placeholder="0.00"
+              inputmode="decimal"
+              [(ngModel)]="newExpense.totalAmount"
+              (ngModelChange)="onTotalAmountChange()">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Date</label>
+            <input
+              type="date"
+              class="form-control"
+              [(ngModel)]="newExpense.expenseDate">
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-6">
+            <label class="form-label">Paid By *</label>
+            <select class="form-control" [(ngModel)]="newExpense.paidByMemberId">
+              <option *ngFor="let m of selectedGroup?.members" [ngValue]="m.id">
+                {{ m.name }}
+              </option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Category (For Ledger)</label>
+            <select class="form-control" [(ngModel)]="newExpense.categoryId">
+              <option *ngFor="let cat of categories" [ngValue]="cat.id">
+                {{ cat.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Split Method Selector -->
+        <div class="form-group mb-3">
+          <label class="form-label">Split Method</label>
+          <div class="split-method-tabs d-flex gap-2">
+            <button
+              type="button"
+              class="method-btn flex-fill"
+              [class.active]="newExpense.splitMethod === 'EQUAL'"
+              (click)="newExpense.splitMethod = 'EQUAL'; onTotalAmountChange()">
+              = Equally
+            </button>
+            <button
+              type="button"
+              class="method-btn flex-fill"
+              [class.active]="newExpense.splitMethod === 'EXACT'"
+              (click)="newExpense.splitMethod = 'EXACT'">
+              ₹ Exact
+            </button>
+            <button
+              type="button"
+              class="method-btn flex-fill"
+              [class.active]="newExpense.splitMethod === 'PERCENT'"
+              (click)="newExpense.splitMethod = 'PERCENT'">
+              % Percent
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom Shares List -->
+        <div class="shares-input-table mb-3 card p-2 bg-slate-subtle">
+          <div class="small fw-semibold text-slate-700 mb-2">Member Breakdown:</div>
+
+          <!-- Equal Split: Checkboxes -->
+          <div *ngIf="newExpense.splitMethod === 'EQUAL'">
+            <div *ngFor="let share of newExpense.customShares" class="d-flex justify-content-between align-items-center py-1">
+              <label class="d-flex align-items-center gap-2 mb-0">
+                <input type="checkbox" [(ngModel)]="share.selected" (change)="onTotalAmountChange()">
+                <span>{{ share.name }}</span>
+              </label>
+              <span class="font-tabular fw-semibold text-teal" *ngIf="share.selected">
+                ₹{{ share.amount | number:'1.2-2' }}
+              </span>
+              <span class="text-secondary small" *ngIf="!share.selected">Excluded</span>
+            </div>
+          </div>
+
+          <!-- Exact Split: Numeric Inputs -->
+          <div *ngIf="newExpense.splitMethod === 'EXACT'">
+            <div *ngFor="let share of newExpense.customShares" class="d-flex justify-content-between align-items-center py-1 gap-2">
+              <span class="small">{{ share.name }}</span>
+              <div class="input-group input-group-sm w-50">
+                <span class="input-group-text">₹</span>
+                <input
+                  type="number"
+                  class="form-control form-control-sm font-tabular text-end"
+                  inputmode="decimal"
+                  placeholder="0.00"
+                  [(ngModel)]="share.amount">
+              </div>
+            </div>
+          </div>
+
+          <!-- Percentage Split: Percent Inputs -->
+          <div *ngIf="newExpense.splitMethod === 'PERCENT'">
+            <div *ngFor="let share of newExpense.customShares" class="d-flex justify-content-between align-items-center py-1 gap-2">
+              <span class="small">{{ share.name }}</span>
+              <div class="input-group input-group-sm w-50">
+                <input
+                  type="number"
+                  class="form-control form-control-sm font-tabular text-end"
+                  inputmode="decimal"
+                  placeholder="0"
+                  [(ngModel)]="share.percent">
+                <span class="input-group-text">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group mb-2">
+          <label class="form-label">What was this for? / Where the money went</label>
+          <textarea
+            rows="2"
+            class="form-control"
+            placeholder="Explain where the money went (e.g. Airport cab ₹350 + highway toll ₹80 paid by Rahul for everyone)"
+            [(ngModel)]="newExpense.notes"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer pt-3 border-top d-flex gap-2">
+        <button type="button" class="btn btn-secondary flex-fill" (click)="showAddExpenseModal = false">Cancel</button>
+        <button type="button" class="btn btn-primary flex-fill" (click)="submitAddExpense()" [disabled]="isLoading || !newExpense.title.trim() || !newExpense.totalAmount">
+          Add Expense
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: AI Receipt Split -->
+  <!-- ============================================== -->
+  <div class="modal-backdrop" *ngIf="showAiSplitModal" (click)="showAiSplitModal = false">
+    <div class="modal-card bottom-sheet animate-slide-up" (click)="$event.stopPropagation()">
+      <div class="modal-header d-flex justify-content-between align-items-center pb-3 border-bottom">
+        <div class="d-flex align-items-center gap-2">
+          <span class="fs-4">⚡</span>
+          <div>
+            <h3 class="modal-title mb-0">AI Receipt Split</h3>
+            <p class="text-secondary small mb-0">{{ selectedGroup?.name }} &bull; {{ selectedGroup?.members?.length }} members</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" (click)="showAiSplitModal = false" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body py-3 max-h-drawer">
+        <!-- Error Alert -->
+        <div *ngIf="aiErrorMessage" class="alert alert-danger py-2 px-3 mb-3 small d-flex justify-content-between align-items-center">
+          <span>{{ aiErrorMessage }}</span>
+          <button type="button" class="btn-close fs-6" (click)="aiErrorMessage = null" aria-label="Close"></button>
+        </div>
+
+        <!-- Input Type Switcher -->
+        <div class="split-method-tabs d-flex gap-2 mb-3">
+          <button
+            type="button"
+            class="method-btn flex-fill"
+            [class.active]="aiActiveTab === 'image'"
+            (click)="aiActiveTab = 'image'">
+            📷 Receipt Photos ({{ aiSelectedFiles.length }})
+          </button>
+          <button
+            type="button"
+            class="method-btn flex-fill"
+            [class.active]="aiActiveTab === 'text'"
+            (click)="aiActiveTab = 'text'">
+            📝 Paste Bill Text
+          </button>
+        </div>
+
+        <!-- Tab 1: Image Upload / Camera -->
+        <div *ngIf="aiActiveTab === 'image'" class="mb-3">
+          <input
+            #aiFileInput
+            type="file"
+            accept="image/*"
+            multiple
+            class="d-none"
+            (change)="onAiFilesSelected($event)">
+
+          <!-- Thumbnails Strip -->
+          <div *ngIf="aiPreviewUrls.length > 0" class="ai-thumbs-strip mb-2">
+            <div *ngFor="let url of aiPreviewUrls; let i = index" class="ai-thumb-item">
+              <img [src]="url" alt="Receipt">
+              <button type="button" class="ai-thumb-remove" (click)="removeAiFile(i)">&times;</button>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button
+              type="button"
+              class="btn btn-outline-secondary flex-fill d-flex align-items-center justify-content-center gap-2 py-2"
+              (click)="aiFileInput.click()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <span>{{ aiSelectedFiles.length > 0 ? '+ Add More Photos' : 'Upload Receipt Photo(s)' }}</span>
+            </button>
+          </div>
+          <div class="text-secondary smaller mt-1">Multi-photo supported: capture front, back, or long itemized receipts.</div>
+        </div>
+
+        <!-- Tab 2: Statement Text -->
+        <div *ngIf="aiActiveTab === 'text'" class="mb-3">
+          <label class="form-label">Receipt Text / SMS Alert</label>
+          <textarea
+            rows="3"
+            class="form-control"
+            placeholder="Paste raw bill text, e.g. Dominos bill: Margherita ₹250, Pasta ₹180, Coke ₹60. Total: ₹490"
+            [(ngModel)]="aiStatementText"></textarea>
+        </div>
+
+        <!-- Member Quick Tap Chips -->
+        <div class="form-group mb-3">
+          <label class="form-label d-flex justify-content-between align-items-center">
+            <span>Group Members</span>
+            <span class="text-secondary smaller">Tap name to add to order notes</span>
+          </label>
+          <div class="member-chips-bar">
+            <button
+              type="button"
+              *ngFor="let m of selectedGroup?.members"
+              class="member-chip-btn"
+              (click)="appendMemberToNotes(m.name)">
+              <span>{{ m.name }}</span>
+              <span class="text-teal fw-bold">+</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Who Ordered What Notes -->
+        <div class="form-group mb-3">
+          <label class="form-label">Who Ordered What? (Order Notes)</label>
+          <textarea
+            rows="3"
+            class="form-control"
+            placeholder="e.g. Rahul had butter chicken (350), Priya had paneer tikka (280), Rahul and Aman shared garlic naan (120), all split tax and tip, Rahul paid"
+            [(ngModel)]="aiOrderNotes"></textarea>
+          <div class="text-secondary smaller mt-1">
+            💡 Mention dishes, names, or shared items. Unmentioned items and taxes are automatically split among everyone.
+          </div>
+        </div>
+
+        <!-- Paid By Selector -->
+        <div class="form-group mb-3">
+          <label class="form-label">Who Paid the Bill?</label>
+          <select class="form-control" [(ngModel)]="aiPayerMemberId">
+            <option *ngFor="let m of selectedGroup?.members" [ngValue]="m.id">
+              {{ m.name }} {{ m.currentUser ? '(You)' : '' }}
+            </option>
+          </select>
+          <div class="text-secondary smaller mt-1">Can also be auto-detected if mentioned in order notes (e.g. "Rahul paid").</div>
+        </div>
+
+        <!-- Run AI Button -->
+        <div class="mb-3" *ngIf="!aiScanResult">
+          <button
+            type="button"
+            class="btn btn-ai-split w-100 py-2 d-flex align-items-center justify-content-center gap-2 fw-semibold"
+            (click)="runAiGroupSplit()"
+            [disabled]="isAiScanning || (aiActiveTab === 'image' && aiSelectedFiles.length === 0) || (aiActiveTab === 'text' && !aiStatementText.trim())">
+            <span *ngIf="isAiScanning" class="spinner-border spinner-border-sm"></span>
+            <span *ngIf="!isAiScanning">✨</span>
+            <span>{{ isAiScanning ? 'Calculating Shares with Gemini AI...' : 'Parse & Calculate Shares with Gemini AI' }}</span>
+          </button>
+        </div>
+
+        <!-- AI Scan Result Breakdown Card -->
+        <div *ngIf="aiScanResult" class="ai-result-preview-card mb-3 animate-fade-in">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <span class="badge bg-primary text-white mb-1">{{ aiScanResult.categoryName }}</span>
+              <h4 class="mb-0 fw-bold text-slate-900">{{ aiScanResult.expenseTitle }}</h4>
+              <div class="text-secondary small">
+                {{ aiScanResult.expenseDate | date:'mediumDate' }} &bull; Paid by <strong class="text-teal">{{ aiScanResult.paidByMemberName }}</strong>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="fs-4 fw-bold text-slate-900 font-tabular">₹{{ aiScanResult.totalAmount | number:'1.2-2' }}</div>
+              <div class="text-secondary smaller" *ngIf="aiScanResult.taxAmount">Tax: ₹{{ aiScanResult.taxAmount | number:'1.2-2' }}</div>
+            </div>
+          </div>
+
+          <!-- Member Shares Breakdown -->
+          <div class="mt-3">
+            <div class="small fw-semibold text-slate-700 mb-2">Calculated Member Shares:</div>
+            <div class="d-flex flex-column gap-2">
+              <div *ngFor="let share of aiScanResult.memberShares" class="share-result-row d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold text-slate-900 small">{{ share.memberName }}</div>
+                  <div class="text-secondary smaller" *ngIf="share.itemsSummary">{{ share.itemsSummary }}</div>
+                </div>
+                <div class="fw-bold text-teal font-tabular">
+                  ₹{{ share.owedAmount | number:'1.2-2' }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes / Where the money went -->
+          <div class="mt-3 p-2 bg-slate-subtle rounded small" *ngIf="aiScanResult.notes">
+            <div class="fw-semibold text-secondary smaller mb-1">Itemized Summary:</div>
+            <div class="text-slate-800" style="white-space: pre-line;">{{ aiScanResult.notes }}</div>
+          </div>
+
+          <!-- Re-scan button -->
+          <div class="mt-2 text-end">
+            <button type="button" class="btn btn-link btn-sm text-secondary p-0" (click)="aiScanResult = null">
+              ↺ Scan Another / Adjust Notes
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer pt-3 border-top d-flex gap-2">
+        <button type="button" class="btn btn-secondary flex-fill" (click)="showAiSplitModal = false">Cancel</button>
+        <button
+          *ngIf="aiScanResult"
+          type="button"
+          class="btn btn-outline-primary flex-fill"
+          (click)="applyAiResultToExpense()">
+          Review in Form →
+        </button>
+        <button
+          *ngIf="aiScanResult"
+          type="button"
+          class="btn btn-primary flex-fill"
+          (click)="saveAiExpenseDirectly()"
+          [disabled]="isLoading">
+          ⚡ Save Expense
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: Settle Up -->
+  <!-- ============================================== -->
+  <div class="modal-backdrop" *ngIf="showSettleModal" (click)="showSettleModal = false">
+    <div class="modal-card bottom-sheet animate-slide-up" (click)="$event.stopPropagation()">
+      <div class="modal-header d-flex justify-content-between align-items-center pb-3 border-bottom">
+        <h3 class="modal-title mb-0">Record Settlement</h3>
+        <button type="button" class="btn-close" (click)="showSettleModal = false" aria-label="Close"></button>
+      </div>
+      <div class="modal-body py-3">
+        <div class="row mb-3">
+          <div class="col-6">
+            <label class="form-label">Payer (Who Paid) *</label>
+            <select class="form-control" [(ngModel)]="settleForm.paidByMemberId">
+              <option *ngFor="let m of selectedGroup?.members" [ngValue]="m.id">
+                {{ m.name }}
+              </option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Recipient (Paid To) *</label>
+            <select class="form-control" [(ngModel)]="settleForm.paidToMemberId">
+              <option *ngFor="let m of selectedGroup?.members" [ngValue]="m.id">
+                {{ m.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-6">
+            <label class="form-label">Settlement Amount (₹) *</label>
+            <input
+              type="number"
+              class="form-control font-tabular fs-5 fw-bold"
+              placeholder="0.00"
+              inputmode="decimal"
+              [(ngModel)]="settleForm.amount">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Date</label>
+            <input
+              type="date"
+              class="form-control"
+              [(ngModel)]="settleForm.settlementDate">
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label">Payment Notes</label>
+          <input
+            type="text"
+            class="form-control"
+            placeholder="e.g. Paid via UPI / GPay"
+            [(ngModel)]="settleForm.notes">
+        </div>
+
+        <div class="form-check p-3 card bg-teal-subtle border-teal">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="recordInLedgerCheck"
+            [(ngModel)]="settleForm.recordInLedger">
+          <label class="form-check-label ms-2 small fw-semibold text-slate-800" for="recordInLedgerCheck">
+            Also record this payment in my personal Income / Expense ledger
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer pt-3 border-top d-flex gap-2">
+        <button type="button" class="btn btn-secondary flex-fill" (click)="showSettleModal = false">Cancel</button>
+        <button type="button" class="btn btn-primary flex-fill" (click)="submitSettle()" [disabled]="isLoading || !settleForm.amount || !settleForm.paidByMemberId || !settleForm.paidToMemberId">
+          Record Payment
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: Add Member -->
+  <!-- ============================================== -->
+  <div class="modal-backdrop" *ngIf="showAddMemberModal" (click)="showAddMemberModal = false">
+    <div class="modal-card bottom-sheet animate-slide-up" (click)="$event.stopPropagation()">
+      <div class="modal-header d-flex justify-content-between align-items-center pb-3 border-bottom">
+        <h3 class="modal-title mb-0">Add Member to Group</h3>
+        <button type="button" class="btn-close" (click)="showAddMemberModal = false" aria-label="Close"></button>
+      </div>
+      <div class="modal-body py-3">
+        <div class="form-group mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label mb-0">Friend Name *</label>
+            <button
+              type="button"
+              class="btn-phonebook-link"
+              (click)="openContactsModal('addMember')"
+              title="Pick from Contacts Book">
+              📇 Contacts
+            </button>
+          </div>
+          <div class="input-with-phonebook position-relative">
+            <input
+              type="text"
+              class="form-control pe-5"
+              placeholder="e.g. Kunal, Sneha"
+              [(ngModel)]="newMember.name">
+            <button
+              type="button"
+              class="btn-phonebook-addon"
+              (click)="openContactsModal('addMember')"
+              title="Pick from Contacts Book"
+              aria-label="Open Contacts Book">
+              📇
+            </button>
+          </div>
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Phone or Email (Optional)</label>
+          <input
+            type="text"
+            class="form-control"
+            placeholder="e.g. +91 9876543210 or friend@gmail.com"
+            [(ngModel)]="newMember.emailOrPhone">
+        </div>
+      </div>
+      <div class="modal-footer pt-3 border-top d-flex gap-2">
+        <button type="button" class="btn btn-secondary flex-fill" (click)="showAddMemberModal = false">Cancel</button>
+        <button type="button" class="btn btn-primary flex-fill" (click)="submitAddMember()" [disabled]="!newMember.name.trim()">
+          Add to Group
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: Splitwise Contacts Book (with Top Submit)-->
+  <!-- ============================================== -->
+  <div class="modal-backdrop" *ngIf="showContactsModal" (click)="closeContactsModal()">
+    <div class="modal-card bottom-sheet animate-slide-up contacts-book-card" (click)="$event.stopPropagation()">
+      <!-- Sticky Top Header with Submit Button -->
+      <div class="modal-header d-flex justify-content-between align-items-center pb-3 border-bottom sticky-top-header">
+        <div class="d-flex align-items-center gap-2">
+          <span class="fs-4">📇</span>
+          <div>
+            <h3 class="modal-title mb-0">Group Contacts</h3>
+            <p class="text-secondary small mb-0">{{ contactsList.length }} saved contacts (cached)</p>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <!-- SUBMIT BUTTON ON TOP -->
+          <button
+            type="button"
+            class="btn btn-primary btn-sm px-3 fw-bold shadow-sm d-flex align-items-center gap-1"
+            (click)="submitSelectedContacts()"
+            [disabled]="getSelectedContactsCount() === 0">
+            <span>✓</span>
+            <span>Add Selected ({{ getSelectedContactsCount() }})</span>
+          </button>
+          <button type="button" class="btn-close" (click)="closeContactsModal()" aria-label="Close"></button>
+        </div>
+      </div>
+
+      <div class="modal-body py-3 max-h-drawer">
+        <!-- Search bar (filters local cache + searches DB) -->
+        <div class="search-box-wrapper mb-3 position-relative">
+          <input
+            type="text"
+            class="form-control ps-4"
+            placeholder="Search by name, nickname, or 10-digit phone..."
+            [(ngModel)]="contactSearchQuery"
+            (input)="onContactSearch()">
+          <span *ngIf="isSearchingContacts" class="spinner-border spinner-border-sm text-secondary position-absolute end-0 top-50 translate-middle-y me-3" role="status"></span>
+        </div>
+
+        <!-- Info Notice -->
+        <div class="p-2 px-3 rounded-lg bg-surface-subtle border small text-secondary mb-3 d-flex align-items-center justify-content-between">
+          <span>💡 Select contacts to add. Tap ✏️ to customize their nickname for your account.</span>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="filteredContacts.length === 0" class="text-center py-5 text-secondary">
+          <div class="fs-1 mb-2">📇</div>
+          <p class="fw-semibold mb-1">No contacts found</p>
+          <p class="small text-muted mb-0">Search registered users by 10-digit phone number or create new groups to save friends.</p>
+        </div>
+
+        <!-- Contacts List -->
+        <div *ngIf="filteredContacts.length > 0" class="contacts-grid d-flex flex-column gap-2">
+          <div
+            *ngFor="let c of filteredContacts"
+            class="contact-item-card p-3 rounded-lg border d-flex justify-content-between align-items-center cursor-pointer transition-all"
+            [class.contact-selected]="c.selected"
+            (click)="toggleContactSelection(c)">
+            
+            <div class="d-flex align-items-center gap-3">
+              <!-- Custom Checkbox -->
+              <input
+                type="checkbox"
+                class="form-check-input mt-0 contact-checkbox"
+                [checked]="c.selected"
+                (click)="$event.stopPropagation(); toggleContactSelection(c)">
+
+              <!-- Contact Avatar -->
+              <div class="contact-avatar">
+                {{ (getContactDisplayName(c)).substring(0, 1).toUpperCase() }}
+              </div>
+
+              <!-- Name & Details -->
+              <div>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="fw-bold contact-display-name">{{ getContactDisplayName(c) }}</span>
+                  <span *ngIf="c.nickname" class="badge bg-secondary-subtle text-secondary small">
+                    Real: {{ c.name }}
+                  </span>
+                </div>
+                <div class="d-flex align-items-center gap-2 small text-secondary mt-1">
+                  <span *ngIf="c.phoneNumber" class="font-tabular font-monospace">📱 {{ c.phoneNumber }}</span>
+                  <span *ngIf="!c.phoneNumber && c.email" class="font-tabular font-monospace">✉️ {{ c.email }}</span>
+                  <span *ngIf="c.groupsCount" class="font-tabular">👥 {{ c.groupsCount }} group(s)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Nickname Edit Button -->
+            <button
+              type="button"
+              class="btn btn-outline-secondary btn-sm py-1 px-2 d-flex align-items-center gap-1"
+              (click)="openNicknameEditor(c, $event)"
+              title="Set custom nickname for this person">
+              <span>✏️</span>
+              <span class="d-none d-sm-inline">Nickname</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer fallback submit button -->
+      <div class="modal-footer pt-3 border-top d-flex gap-2">
+        <button type="button" class="btn btn-secondary flex-fill" (click)="closeContactsModal()">Cancel</button>
+        <button type="button" class="btn btn-primary flex-fill fw-bold" (click)="submitSelectedContacts()" [disabled]="getSelectedContactsCount() === 0">
+          Add Selected ({{ getSelectedContactsCount() }})
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: Custom Nickname Editor                  -->
+  <!-- ============================================== -->
+  <div class="modal-backdrop" *ngIf="showEditNicknameModal" (click)="showEditNicknameModal = false">
+    <div class="modal-card bottom-sheet animate-slide-up" (click)="$event.stopPropagation()">
+      <div class="modal-header d-flex justify-content-between align-items-center pb-3 border-bottom">
+        <div>
+          <h3 class="modal-title mb-0">Custom Nickname</h3>
+          <p class="text-secondary small mb-0">For: {{ editingNicknameContact?.name }} ({{ editingNicknameContact?.phoneNumber || 'No phone' }})</p>
+        </div>
+        <button type="button" class="btn-close" (click)="showEditNicknameModal = false" aria-label="Close"></button>
+      </div>
+      <div class="modal-body py-3">
+        <div class="alert alert-info py-2 px-3 small mb-3">
+          💡 This nickname will only show for <strong>you</strong>. It will not alter their real name in the database.
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Nickname / Custom Display Name</label>
+          <input
+            type="text"
+            class="form-control"
+            placeholder="e.g. Roommate, Bhai, Chintu"
+            [(ngModel)]="nicknameInput"
+            autofocus>
+        </div>
+      </div>
+      <div class="modal-footer pt-3 border-top d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary" (click)="clearNickname()" *ngIf="editingNicknameContact?.nickname">
+          Reset to Real Name
+        </button>
+        <button type="button" class="btn btn-secondary flex-fill" (click)="showEditNicknameModal = false">Cancel</button>
+        <button type="button" class="btn btn-primary flex-fill" (click)="saveNickname()">
+          Save Nickname
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

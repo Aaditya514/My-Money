@@ -1,0 +1,101 @@
+/* ==========================================================================
+   Budget List Styles
+   ========================================================================== */
+
+.budget-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .budget-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .form-card {
+    order: 2;
+  }
+
+  .list-card {
+    order: 1;
+  }
+}
+
+.input-prefix-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-prefix {
+  position: absolute;
+  left: 12px;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--slate-400);
+  pointer-events: none;
+}
+
+.form-control-prefixed {
+  padding-left: 28px !important;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+/* Budget Item Card */
+.budget-item-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.15s ease;
+}
+
+.budget-item-card:hover {
+  border-color: var(--slate-300);
+}
+
+.budget-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.stat-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.stat-val {
+  font-size: var(--fs-base);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+@media (max-width: 480px) {
+  .budget-stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+  }
+
+  .budget-stats-grid .stat-col:last-child {
+    grid-column: span 2;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border-color);
+  }
+}
+

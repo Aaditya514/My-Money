@@ -1,0 +1,86 @@
+/* ==========================================================================
+   Register Component Styles
+   ========================================================================== */
+
+.auth-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 85vh;
+  padding: var(--space-4);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  padding: var(--space-6);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--slate-200);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: var(--space-5);
+}
+
+.auth-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.auth-title {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--slate-900);
+  margin-bottom: var(--space-1);
+}
+
+.auth-subtitle {
+  color: var(--slate-500);
+  font-size: var(--fs-sm);
+  margin-bottom: 0;
+}
+
+.btn-block {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--slate-200);
+  font-size: var(--fs-sm);
+  color: var(--slate-600);
+}
+
+.auth-footer a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}
+
+.tracking-wider {
+  letter-spacing: 0.35em;
+}
+
+.letter-spacing-1 {
+  letter-spacing: 1px;
+}
+
+.bg-surface-subtle {
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.03));
+}
+

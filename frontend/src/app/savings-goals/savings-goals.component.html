@@ -1,0 +1,296 @@
+<div class="page-container animate-fade-in">
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="page-header-content">
+      <div>
+        <h1 class="page-title">Savings Goals</h1>
+        <p class="page-subtitle">Track capital reserves, emergency fund milestones, and goal contributions</p>
+      </div>
+      <div class="page-actions">
+        <a routerLink="/salary-plan" class="btn btn-secondary btn-sm">Salary Plan</a>
+        <button type="button" class="btn btn-primary btn-sm" (click)="openCreateModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add Goal
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Alerts -->
+  <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+    <span>{{ errorMessage }}</span>
+    <button type="button" class="alert-close" (click)="errorMessage = ''" aria-label="Dismiss alert">&times;</button>
+  </div>
+  <div *ngIf="successMessage" class="alert alert-success" role="alert">
+    <span>{{ successMessage }}</span>
+    <button type="button" class="alert-close" (click)="successMessage = ''" aria-label="Dismiss alert">&times;</button>
+  </div>
+
+  <!-- Summary Dashboard Cards -->
+  <div class="stats-grid mb-4">
+    <div class="stat-card">
+      <div class="stat-content">
+        <span class="stat-label">Total Target</span>
+        <div class="stat-value tabular-nums text-slate-900">₹{{ getTotalTarget() | number:'1.0-0' }}</div>
+        <span class="stat-subtext">{{ goals.length }} registered goals</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-content">
+        <span class="stat-label">Total Saved</span>
+        <div class="stat-value text-income tabular-nums">₹{{ getTotalCurrent() | number:'1.0-0' }}</div>
+        <span class="stat-subtext">Cumulative saved capital</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-content">
+        <span class="stat-label">Overall Progress</span>
+        <div class="stat-value tabular-nums text-slate-900">{{ getTotalProgress() }}%</div>
+        <div class="progress mt-2" style="height: 6px;">
+          <div class="progress-bar bg-primary" [style.width.%]="getTotalProgress()"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-content">
+        <span class="stat-label">Completed Goals</span>
+        <div class="stat-value tabular-nums text-slate-900">{{ getCompletedGoalsCount() }} / {{ goals.length }}</div>
+        <span class="stat-subtext">{{ goals.length - getCompletedGoalsCount() }} currently active</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="empty-state py-5">
+    <div class="spinner"></div>
+    <p class="text-secondary small mt-3">Loading savings goals...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && goals.length === 0" class="empty-state card p-5 text-center">
+    <h3 class="fs-lg fw-semibold mb-2">No Savings Goals Configured</h3>
+    <p class="text-secondary small mx-auto mb-3" style="max-width: 480px;">
+      Set up defined targets like a 6-month Emergency Reserve, Vacation Fund, or Major Asset Purchase with automated progress tracking.
+    </p>
+    <button type="button" class="btn btn-primary btn-sm mx-auto" (click)="openCreateModal()">
+      Create First Goal
+    </button>
+  </div>
+
+  <!-- Goals Grid -->
+  <div *ngIf="!loading && goals.length > 0" class="goals-grid">
+    <div *ngFor="let goal of goals" class="goal-card card" [class.goal-card-completed]="goal.isCompleted">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <h3 class="goal-title fs-md fw-semibold text-slate-900 mb-1">
+              {{ goal.name }}
+              <span *ngIf="goal.isCompleted" class="badge badge-income ms-2">Completed</span>
+            </h3>
+            <p *ngIf="goal.notes" class="text-secondary small mb-0">{{ goal.notes }}</p>
+          </div>
+          <div class="d-flex gap-1">
+            <button type="button" class="btn btn-secondary btn-sm py-1 px-2" (click)="openEditModal(goal)">Edit</button>
+            <button type="button" class="btn btn-danger btn-sm py-1 px-2" (click)="deleteGoal(goal)">Delete</button>
+          </div>
+        </div>
+
+        <!-- Progress Metrics -->
+        <div class="my-3">
+          <div class="d-flex justify-content-between align-items-baseline mb-1">
+            <span class="fs-lg fw-bold text-slate-900 tabular-nums">
+              ₹{{ goal.currentAmount | number:'1.0-0' }}
+            </span>
+            <span class="text-secondary small tabular-nums">
+              Target: ₹{{ goal.targetAmount | number:'1.0-0' }}
+            </span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="progress" style="height: 8px;">
+            <div
+              class="progress-bar"
+              [ngClass]="goal.isCompleted ? 'bg-success' : 'bg-primary'"
+              [style.width.%]="goal.progressPercentage"
+              role="progressbar"
+              [attr.aria-valuenow]="goal.progressPercentage"
+              aria-valuemin="0"
+              aria-valuemax="100">
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between small text-secondary mt-1 tabular-nums">
+            <span>{{ goal.progressPercentage }}% achieved</span>
+            <span *ngIf="!goal.isCompleted">₹{{ goal.remainingAmount | number:'1.0-0' }} remaining</span>
+            <span *ngIf="goal.isCompleted" class="text-income fw-semibold">Target Achieved</span>
+          </div>
+        </div>
+
+        <div *ngIf="goal.targetDate" class="target-date-box small mb-3">
+          Target Date: <strong class="tabular-nums text-slate-800">{{ goal.targetDate | date:'mediumDate' }}</strong>
+        </div>
+
+        <!-- Action Buttons Footer -->
+        <div class="d-flex gap-2 pt-3 border-top">
+          <button type="button" class="btn btn-primary btn-sm flex-grow-1" (click)="openContributeModal(goal)">
+            + Contribute
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="openHistoryModal(goal)">
+            History
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            (click)="toggleComplete(goal)">
+            {{ goal.isCompleted ? 'Reopen' : 'Mark Done' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: Create / Edit Goal ================= -->
+<div *ngIf="showGoalModal" class="modal-backdrop-custom animate-fade-in" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <div class="modal-header d-flex justify-content-between align-items-center">
+      <h2 class="card-title mb-0">{{ editingGoalId ? 'Edit Savings Goal' : 'New Savings Goal' }}</h2>
+      <button type="button" class="alert-close" (click)="closeGoalModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body p-4">
+      <form [formGroup]="goalForm" (ngSubmit)="saveGoal()" novalidate>
+        <div class="form-group mb-3">
+          <label for="goalName" class="form-label">Goal Name <span class="required">*</span></label>
+          <input type="text" id="goalName" class="form-control" formControlName="name" placeholder="e.g. Emergency Fund, Vehicle, Vacation" />
+          <div *ngIf="goalForm.get('name')?.touched && goalForm.get('name')?.invalid" class="form-error">
+            Goal name is required.
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <label for="goalTarget" class="form-label">Target Amount (₹) <span class="required">*</span></label>
+            <input type="number" id="goalTarget" class="form-control tabular-nums" formControlName="targetAmount" placeholder="100000" min="1" inputmode="decimal" />
+            <div *ngIf="goalForm.get('targetAmount')?.touched && goalForm.get('targetAmount')?.invalid" class="form-error">
+              Enter target amount &ge; ₹1.
+            </div>
+          </div>
+          <div class="col-6">
+            <label for="goalInitial" class="form-label">Current Balance (₹)</label>
+            <input type="number" id="goalInitial" class="form-control tabular-nums" formControlName="initialAmount" placeholder="0" inputmode="decimal" />
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label for="goalDate" class="form-label">Target Date (Optional)</label>
+          <input type="date" id="goalDate" class="form-control" formControlName="targetDate" />
+        </div>
+
+        <div class="form-group mb-3">
+          <label for="goalNotes" class="form-label">Notes</label>
+          <textarea id="goalNotes" class="form-control" formControlName="notes" rows="2" placeholder="e.g. 6-month living expenses emergency reserve"></textarea>
+        </div>
+
+        <div class="modal-actions d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+          <button type="button" class="btn btn-secondary" (click)="closeGoalModal()" [disabled]="savingGoal">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="savingGoal">
+            {{ savingGoal ? 'Saving...' : (editingGoalId ? 'Update Goal' : 'Create Goal') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: Contribute to Goal ================= -->
+<div *ngIf="showContributeModal" class="modal-backdrop-custom animate-fade-in" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <div class="modal-header d-flex justify-content-between align-items-center">
+      <h2 class="card-title mb-0">Contribute to "{{ selectedGoalForContribution?.name }}"</h2>
+      <button type="button" class="alert-close" (click)="closeContributeModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body p-4">
+      <form [formGroup]="contributeForm" (ngSubmit)="submitContribution()" novalidate>
+        <div class="alert alert-info py-2 small mb-3 tabular-nums">
+          Target: ₹{{ (selectedGoalForContribution?.targetAmount || 0) | number:'1.0-0' }} |
+          Saved: ₹{{ (selectedGoalForContribution?.currentAmount || 0) | number:'1.0-0' }} |
+          Remaining: ₹{{ (selectedGoalForContribution?.remainingAmount || 0) | number:'1.0-0' }}
+        </div>
+
+        <div class="form-group mb-3">
+          <label for="contribAmount" class="form-label">Contribution Amount (₹) <span class="required">*</span></label>
+          <input type="number" id="contribAmount" class="form-control tabular-nums" formControlName="amount" placeholder="5000" min="1" inputmode="decimal" />
+          <div *ngIf="contributeForm.get('amount')?.touched && contributeForm.get('amount')?.invalid" class="form-error">
+            Amount must be at least ₹1.
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label for="contribDate" class="form-label">Contribution Date <span class="required">*</span></label>
+          <input type="date" id="contribDate" class="form-control" formControlName="contributionDate" />
+        </div>
+
+        <div class="form-group mb-3">
+          <label for="contribNotes" class="form-label">Notes (Optional)</label>
+          <input type="text" id="contribNotes" class="form-control" formControlName="notes" placeholder="e.g. Monthly salary savings allocation" />
+        </div>
+
+        <div class="modal-actions d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+          <button type="button" class="btn btn-secondary" (click)="closeContributeModal()" [disabled]="contributing">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="contributing">
+            {{ contributing ? 'Processing...' : 'Confirm Contribution' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: Contribution History ================= -->
+<div *ngIf="showHistoryModal" class="modal-backdrop-custom animate-fade-in" role="dialog" aria-modal="true">
+  <div class="modal-card modal-card-lg">
+    <div class="modal-header d-flex justify-content-between align-items-center">
+      <h2 class="card-title mb-0">Contribution History: {{ selectedGoalForHistory?.name }}</h2>
+      <button type="button" class="alert-close" (click)="closeHistoryModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body p-4">
+      <div *ngIf="loadingHistory" class="empty-state py-4 text-center">
+        <div class="spinner"></div>
+        <p class="small text-secondary mt-2">Loading contribution log...</p>
+      </div>
+
+      <div *ngIf="!loadingHistory && historyContributions.length === 0" class="empty-state py-4 text-center text-secondary small">
+        No contributions recorded yet for this goal.
+      </div>
+
+      <div *ngIf="!loadingHistory && historyContributions.length > 0" class="table-container">
+        <table class="table" aria-label="Contribution History Table">
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col" class="text-end">Amount</th>
+              <th scope="col">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of historyContributions">
+              <td class="tabular-nums text-secondary small">{{ c.contributionDate | date:'mediumDate' }}</td>
+              <td class="text-end font-weight-bold text-income tabular-nums">+₹{{ c.amount | number:'1.2-2' }}</td>
+              <td class="text-secondary small">{{ c.notes || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-actions d-flex justify-content-end mt-4 pt-3 border-top">
+        <button type="button" class="btn btn-secondary" (click)="closeHistoryModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

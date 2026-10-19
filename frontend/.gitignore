@@ -1,0 +1,15 @@
+# Angular artifacts
+dist/
+tmp/
+out-tsc/
+.angular/
+node_modules/
+.npm
+*.tsbuildinfo
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

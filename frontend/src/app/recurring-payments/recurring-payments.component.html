@@ -1,0 +1,322 @@
+<div class="page-container animate-fade-in">
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="page-header-content">
+      <div>
+        <h1 class="page-title">Repeating Commitments &amp; Bills</h1>
+        <p class="page-subtitle">Track rent, utility bills, subscriptions, and recurring income schedules</p>
+      </div>
+      <div class="page-actions">
+        <button type="button" class="btn btn-primary btn-sm" (click)="openCreateModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add Repeating Bill
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success" role="alert">
+    <span>{{ successMessage }}</span>
+    <button type="button" class="alert-close" (click)="successMessage = ''" aria-label="Dismiss alert">&times;</button>
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+    <span>{{ errorMessage }}</span>
+    <button type="button" class="alert-close" (click)="errorMessage = ''" aria-label="Dismiss alert">&times;</button>
+  </div>
+
+  <!-- KPI Summary Banner -->
+  <div class="kpi-grid mb-4">
+    <div class="kpi-card">
+      <span class="kpi-label">Monthly Commitments</span>
+      <div class="kpi-value text-slate-900 tabular-nums">
+        ₹{{ totalMonthlyCommitment | number:'1.0-0' }}
+      </div>
+      <span class="kpi-caption">Normalized monthly expense baseline</span>
+    </div>
+
+    <div class="kpi-card">
+      <span class="kpi-label">Active Schedules</span>
+      <div class="kpi-value text-slate-900 tabular-nums">
+        {{ activeCount }} <span class="text-secondary small fw-normal">/ {{ recurringPayments.length }}</span>
+      </div>
+      <span class="kpi-caption">{{ recurringPayments.length - activeCount }} currently paused</span>
+    </div>
+
+    <div class="kpi-card" [class.border-warning]="dueSoonCount > 0">
+      <span class="kpi-label">Due in Next 7 Days</span>
+      <div class="kpi-value tabular-nums" [ngClass]="dueSoonCount > 0 ? 'text-warning' : 'text-slate-900'">
+        {{ dueSoonCount }} <span class="small fw-normal text-secondary">(₹{{ dueSoonAmount | number:'1.0-0' }})</span>
+      </div>
+      <span class="kpi-caption">{{ dueSoonCount > 0 ? 'Action required soon' : 'All commitments on schedule' }}</span>
+    </div>
+  </div>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="card mb-4">
+    <div class="card-body p-3">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="filter-pills" role="group" aria-label="Filter recurring payments">
+          <button
+            type="button"
+            class="preset-pill"
+            [class.active]="activeFilter === 'ALL'"
+            (click)="activeFilter = 'ALL'">
+            All ({{ recurringPayments.length }})
+          </button>
+          <button
+            type="button"
+            class="preset-pill"
+            [class.active]="activeFilter === 'ACTIVE'"
+            (click)="activeFilter = 'ACTIVE'">
+            Active ({{ activeCount }})
+          </button>
+          <button
+            type="button"
+            class="preset-pill"
+            [class.active]="activeFilter === 'DUE_SOON'"
+            (click)="activeFilter = 'DUE_SOON'">
+            Due Soon ({{ dueSoonCount }})
+          </button>
+          <button
+            type="button"
+            class="preset-pill"
+            [class.active]="activeFilter === 'PAUSED'"
+            (click)="activeFilter = 'PAUSED'">
+            Paused ({{ recurringPayments.length - activeCount }})
+          </button>
+        </div>
+
+        <div class="search-box">
+          <input
+            type="text"
+            class="form-control form-control-sm"
+            placeholder="Search bills, rent, categories..."
+            [(ngModel)]="searchQuery"
+            aria-label="Search repeating payments"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="empty-state py-5">
+    <div class="spinner"></div>
+    <p class="text-secondary small mt-3">Loading commitment schedules...</p>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!loading">
+    <!-- Empty State -->
+    <div *ngIf="filteredPayments.length === 0" class="empty-state card p-5 text-center">
+      <h3 class="fs-lg fw-semibold mb-2">No repeating commitments found</h3>
+      <p class="text-secondary small mx-auto mb-3" style="max-width: 480px;">
+        Track fixed obligations like apartment rent, Wi-Fi, insurance premiums, or software subscriptions. You will receive due alerts and can record payments in 1 click.
+      </p>
+      <button type="button" class="btn btn-primary btn-sm mx-auto" (click)="openCreateModal()">
+        Add Repeating Bill
+      </button>
+    </div>
+
+    <!-- Payments Grid -->
+    <div *ngIf="filteredPayments.length > 0" class="payments-grid">
+      <div
+        *ngFor="let item of filteredPayments"
+        class="card payment-card"
+        [class.is-paused]="!item.active"
+        [class.is-overdue]="item.overdue">
+        
+        <div class="card-body">
+          <!-- Top Row -->
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h3 class="fs-md fw-semibold text-slate-900 mb-1">{{ item.title }}</h3>
+              <div class="d-flex align-items-center gap-1 flex-wrap">
+                <span class="badge badge-secondary">{{ item.categoryName || 'General' }}</span>
+                <span class="badge badge-info">{{ item.frequency }}</span>
+                <span *ngIf="item.type === 'INCOME'" class="badge badge-income">Income</span>
+              </div>
+            </div>
+
+            <span class="badge" [ngClass]="getDueBadgeClass(item)">
+              {{ getDueText(item) }}
+            </span>
+          </div>
+
+          <!-- Amount -->
+          <div class="my-3">
+            <div class="d-flex justify-content-between align-items-baseline">
+              <span class="text-secondary small">Amount</span>
+              <div class="fs-xl fw-bold tabular-nums" [ngClass]="item.type === 'INCOME' ? 'text-income' : 'text-slate-900'">
+                {{ item.type === 'INCOME' ? '+' : '' }}₹{{ item.amount | number:'1.2-2' }}
+              </div>
+            </div>
+            <p *ngIf="item.notes" class="text-muted small mt-1 mb-0">{{ item.notes }}</p>
+          </div>
+
+          <!-- Schedule Dates -->
+          <div class="schedule-dates-bar mb-3">
+            <span>Started: <strong class="tabular-nums">{{ item.startDate }}</strong></span>
+            <span>Next Due: <strong class="tabular-nums text-slate-900">{{ item.nextDueDate }}</strong></span>
+          </div>
+
+          <!-- Card Actions Footer -->
+          <div class="card-actions-footer pt-3 border-top d-flex justify-content-between align-items-center">
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="onToggleActive(item)"
+              [title]="item.active ? 'Pause this payment' : 'Resume this payment'">
+              {{ item.active ? 'Pause' : 'Resume' }}
+            </button>
+
+            <div class="d-flex align-items-center gap-1">
+              <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                (click)="onRecordPayment(item)"
+                [disabled]="recordingId === item.id || !item.active"
+                title="Record in transaction ledger and advance next due date">
+                <span *ngIf="recordingId === item.id" class="spinner-border spinner-border-sm" role="status"></span>
+                <span *ngIf="recordingId !== item.id">Record Now</span>
+              </button>
+
+              <button type="button" class="btn btn-secondary btn-sm" (click)="openEditModal(item)">Edit</button>
+              <button type="button" class="btn btn-danger btn-sm" (click)="onDelete(item)">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Create/Edit -->
+  <div *ngIf="showModal" class="modal-backdrop-custom animate-fade-in" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header d-flex justify-content-between align-items-center">
+        <h2 class="card-title mb-0">{{ isEditing ? 'Edit Repeating Commitment' : 'Add Repeating Commitment' }}</h2>
+        <button type="button" class="alert-close" (click)="closeModal()" aria-label="Close modal">&times;</button>
+      </div>
+
+      <form [formGroup]="paymentForm" (ngSubmit)="onSave()" novalidate>
+        <div class="modal-body p-4">
+          <!-- Title -->
+          <div class="form-group mb-3">
+            <label for="paymentTitle" class="form-label">Payment Title <span class="required">*</span></label>
+            <input
+              type="text"
+              id="paymentTitle"
+              class="form-control"
+              formControlName="title"
+              placeholder="e.g. Apartment Rent, Broadband, Gym Membership"
+            />
+            <div *ngIf="paymentForm.get('title')?.touched && paymentForm.get('title')?.invalid" class="form-error">
+              Title is required.
+            </div>
+          </div>
+
+          <!-- Amount and Type -->
+          <div class="row g-3 mb-3">
+            <div class="col-sm-7">
+              <label for="paymentAmount" class="form-label">Amount (₹) <span class="required">*</span></label>
+              <input
+                type="number"
+                id="paymentAmount"
+                class="form-control tabular-nums"
+                formControlName="amount"
+                placeholder="0.00"
+                min="0.01"
+                step="0.01"
+                inputmode="decimal"
+              />
+              <div *ngIf="paymentForm.get('amount')?.touched && paymentForm.get('amount')?.invalid" class="form-error">
+                A valid amount greater than 0 is required.
+              </div>
+            </div>
+
+            <div class="col-sm-5">
+              <label for="paymentType" class="form-label">Commitment Type</label>
+              <select id="paymentType" class="form-select" formControlName="type">
+                <option value="EXPENSE">Expense (Bill/Rent)</option>
+                <option value="INCOME">Income (Retainer/Salary)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Category and Frequency -->
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label for="paymentCategory" class="form-label">Category <span class="required">*</span></label>
+              <select id="paymentCategory" class="form-select" formControlName="categoryId">
+                <option [ngValue]="null" disabled>Select category</option>
+                <option *ngFor="let cat of categories" [ngValue]="cat.id">
+                  {{ cat.name }} ({{ cat.type }})
+                </option>
+              </select>
+              <div *ngIf="paymentForm.get('categoryId')?.touched && paymentForm.get('categoryId')?.invalid" class="form-error">
+                Category is required.
+              </div>
+            </div>
+
+            <div class="col-sm-6">
+              <label for="paymentFreq" class="form-label">Repeat Frequency <span class="required">*</span></label>
+              <select id="paymentFreq" class="form-select" formControlName="frequency">
+                <option *ngFor="let freq of frequencies" [value]="freq.value">
+                  {{ freq.label }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Dates -->
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label for="paymentStartDate" class="form-label">Start Date <span class="required">*</span></label>
+              <input type="date" id="paymentStartDate" class="form-control" formControlName="startDate" />
+            </div>
+
+            <div class="col-sm-6">
+              <label for="paymentNextDueDate" class="form-label">Next Due Date <span class="required">*</span></label>
+              <input type="date" id="paymentNextDueDate" class="form-control" formControlName="nextDueDate" />
+              <div class="text-secondary small mt-1">Calendar date for next upcoming charge</div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="form-group mb-3">
+            <label for="paymentNotes" class="form-label">Notes / Payment References</label>
+            <input
+              type="text"
+              id="paymentNotes"
+              class="form-control"
+              formControlName="notes"
+              placeholder="e.g. Account number, Landlord UPI, due on the 1st"
+            />
+          </div>
+
+          <!-- Active checkbox -->
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="activeCheckbox" formControlName="active" />
+            <label class="form-check-label small" for="activeCheckbox">
+              <strong>Active recurring commitment</strong> (uncheck to pause without deleting)
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer d-flex justify-content-end gap-2 p-3 border-top">
+          <button type="button" class="btn btn-secondary" (click)="closeModal()" [disabled]="actionLoading">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="actionLoading">
+            <span *ngIf="actionLoading" class="spinner-border spinner-border-sm me-1" role="status"></span>
+            <span>{{ isEditing ? 'Save Changes' : 'Create Repeating Bill' }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

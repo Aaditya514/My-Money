@@ -1,0 +1,19 @@
+.main-content {
+  min-height: calc(100vh - 60px);
+}
+
+@media (max-width: 767px) {
+  .main-content {
+    min-height: calc(100vh - 54px);
+    /* Safe padding so bottom navigation bar and FAB never obscure content or buttons */
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 16px)) !important;
+  }
+}
+
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+  .main-content {
+    min-height: calc(100vh - 44px);
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 8px)) !important;
+  }
+}
+

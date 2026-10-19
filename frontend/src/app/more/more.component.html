@@ -1,0 +1,415 @@
+<div class="page-container more-page animate-fade-in">
+  <!-- Profile Summary Card with Three Dots Menu -->
+  <div class="profile-header-card mb-4" *ngIf="currentUser">
+    <div class="d-flex align-items-center gap-3 flex-grow-1">
+      <div class="profile-avatar">
+        {{ currentUser.name.charAt(0).toUpperCase() }}
+      </div>
+      <div class="profile-details">
+        <h2 class="profile-name mb-0">{{ currentUser.name }}</h2>
+        <p class="profile-email text-secondary mb-0">{{ currentUser.email }}</p>
+      </div>
+    </div>
+
+    <!-- Three Dots Action Button -->
+    <div class="position-relative">
+      <button
+        type="button"
+        class="three-dots-btn"
+        (click)="toggleMenu()"
+        title="More Actions &amp; Gemini Key"
+        aria-label="More Actions"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="5" r="2"></circle>
+          <circle cx="12" cy="12" r="2"></circle>
+          <circle cx="12" cy="19" r="2"></circle>
+        </svg>
+      </button>
+
+      <!-- Three Dots Dropdown Menu -->
+      <div class="three-dots-menu card shadow-lg" *ngIf="showMenu">
+        <button type="button" class="menu-item" (click)="openKeyModal()">
+          <div class="menu-icon-box bg-purple-subtle text-purple">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5L10 10l1.5 1.5L9 14l-2-2-5 5v3h3l5-5-2-2 2.5-2.5L12 12l2.5-2.5 1.5 1.5L19 8l1.5-1.5L22 5l-1-3z"></path>
+            </svg>
+          </div>
+          <div class="text-start">
+            <div class="fw-semibold small">Update Gemini AI Key</div>
+            <div class="text-muted extra-small">Add custom key if scan quota is full</div>
+          </div>
+        </button>
+        <button type="button" class="menu-item" (click)="openNotifications(); closeMenu()">
+          <div class="menu-icon-box bg-blue-subtle text-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+          </div>
+          <div class="text-start">
+            <div class="fw-semibold small">Financial Alerts</div>
+            <div class="text-muted extra-small">View overdue bills and debts</div>
+          </div>
+        </button>
+        <button type="button" class="menu-item" (click)="installPwa(); closeMenu()" *ngIf="!isInstalled">
+          <div class="menu-icon-box bg-teal-subtle text-teal">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+          </div>
+          <div class="text-start">
+            <div class="fw-semibold small">Install Mobile App</div>
+            <div class="text-muted extra-small">Add to phone home screen</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- Backdrop for dropdown -->
+      <div class="menu-backdrop" *ngIf="showMenu" (click)="closeMenu()"></div>
+    </div>
+  </div>
+
+  <!-- PWA Install Prompt Banner -->
+  <div class="pwa-install-banner card mb-4" *ngIf="!isInstalled">
+    <div class="d-flex align-items-center justify-content-between gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="pwa-icon-box">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+        </div>
+        <div>
+          <div class="fw-semibold text-slate-900 small">Install as Mobile App</div>
+          <div class="text-secondary small">Add to your home screen for fast one-tap access</div>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm flex-shrink-0" (click)="installPwa()">
+        Install App
+      </button>
+    </div>
+  </div>
+
+  <!-- Section 1: Financial Planning & Automation -->
+  <div class="settings-group mb-4">
+    <div class="group-title">Planning &amp; Commitments</div>
+    <div class="settings-list card">
+      <!-- In-App Alerts -->
+      <button type="button" class="settings-item w-100 text-start border-0 bg-transparent" (click)="openNotifications()">
+        <div class="item-icon-box bg-blue-subtle text-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+        </div>
+        <div class="item-content">
+          <div class="item-title d-flex align-items-center gap-2">
+            <span>Financial Alerts &amp; Notifications</span>
+            <span class="badge bg-danger text-white rounded-pill px-2 py-0" *ngIf="(unreadCount$ | async) as count" [class.d-none]="count === 0">
+              {{ count }} new
+            </span>
+          </div>
+          <div class="item-subtitle">Phone lock-screen alerts, rent reminders, and Splitwise debts</div>
+        </div>
+        <span class="chevron">&rsaquo;</span>
+      </button>
+
+      <!-- Splitwise -->
+      <a routerLink="/splitwise" class="settings-item">
+        <div class="item-icon-box bg-teal-subtle text-teal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+        <div class="item-content">
+          <div class="item-title d-flex align-items-center gap-2">
+            <span>Splitwise &amp; Group Bills</span>
+            <span class="badge badge-teal-subtle">New</span>
+          </div>
+          <div class="item-subtitle">Split group expenses with friends and 1-tap sync to ledger</div>
+        </div>
+        <span class="chevron">&rsaquo;</span>
+      </a>
+
+      <!-- Recurring Bills -->
+      <a routerLink="/recurring" class="settings-item">
+        <div class="item-icon-box bg-teal-subtle text-teal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Repeating Bills &amp; Rent</div>
+          <div class="item-subtitle">Manage subscriptions, utility commitments, and rent due dates</div>
+        </div>
+        <span class="chevron">&rsaquo;</span>
+      </a>
+
+      <!-- Salary Plan -->
+      <a routerLink="/salary-plan" class="settings-item">
+        <div class="item-icon-box bg-blue-subtle text-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Monthly Salary &amp; Budget Plan</div>
+          <div class="item-subtitle">Custom income sources, allocations, and cushion buffer</div>
+        </div>
+        <span class="chevron">&rsaquo;</span>
+      </a>
+
+      <!-- Savings Goals -->
+      <a routerLink="/savings-goals" class="settings-item">
+        <div class="item-icon-box bg-green-subtle text-income">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Savings Goals &amp; Safety Net</div>
+          <div class="item-subtitle">Track emergency funds and financial milestones</div>
+        </div>
+        <span class="chevron">&rsaquo;</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Section 2: Smart Tools & Configuration -->
+  <div class="settings-group mb-4">
+    <div class="group-title">Smart Tools &amp; Settings</div>
+    <div class="settings-list card">
+      <!-- Gemini AI Scanner -->
+      <a routerLink="/ai-scanner" class="settings-item">
+        <div class="item-icon-box bg-teal-subtle text-teal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+        </div>
+        <div class="item-content">
+          <div class="item-title">AI Multi-Photo Receipt Scanner</div>
+          <div class="item-subtitle">Scan multi-page receipts using camera or upload images</div>
+        </div>
+        <span class="chevron">&rsaquo;</span>
+      </a>
+
+      <!-- Update Gemini AI Key Row -->
+      <button type="button" class="settings-item w-100 text-start border-0 bg-transparent" (click)="openKeyModal()">
+        <div class="item-icon-box bg-purple-subtle text-purple">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5L10 10l1.5 1.5L9 14l-2-2-5 5v3h3l5-5-2-2 2.5-2.5L12 12l2.5-2.5 1.5 1.5L19 8l1.5-1.5L22 5l-1-3z"></path>
+          </svg>
+        </div>
+        <div class="item-content">
+          <div class="item-title d-flex align-items-center gap-2">
+            <span>Gemini AI API Key</span>
+            <span class="badge" [ngClass]="hasCustomKey ? 'bg-success text-white' : 'badge-secondary'">
+              {{ hasCustomKey ? 'Custom Active' : 'Default' }}
+            </span>
+          </div>
+          <div class="item-subtitle">Update your personal Gemini API key when upload limits are reached</div>
+        </div>
+        <span class="chevron">&rsaquo;</span>
+      </button>
+
+      <!-- Categories -->
+      <a routerLink="/categories" class="settings-item">
+        <div class="item-icon-box bg-slate-subtle text-slate-700">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+        </div>
+        <div class="item-content">
+          <div class="item-title">Categories &amp; Classification</div>
+          <div class="item-subtitle">Customize spending categories and classifications</div>
+        </div>
+        <span class="chevron">&rsaquo;</span>
+      </a>
+    </div>
+  <!-- Section 3: Appearance & Theme -->
+  <div class="settings-group mb-4">
+    <div class="group-title">Appearance &amp; Theme</div>
+    <div class="settings-list card p-3">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="item-icon-box" style="width:36px; height:36px; border-radius: 10px; background-color: rgba(99, 102, 241, 0.12); color: #6366f1; display:flex; align-items:center; justify-content:center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="fw-semibold small text-main">Theme Mode</div>
+            <div class="text-secondary extra-small">Choose light, dark, or system match</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Segmented Theme Switcher -->
+      <div class="theme-segmented-control" *ngIf="(currentTheme$ | async) as curTheme">
+        <button type="button" class="theme-seg-btn" [class.active]="curTheme === 'light'" (click)="setTheme('light')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <span>Light</span>
+        </button>
+
+        <button type="button" class="theme-seg-btn" [class.active]="curTheme === 'dark'" (click)="setTheme('dark')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <span>Dark</span>
+        </button>
+
+        <button type="button" class="theme-seg-btn" [class.active]="curTheme === 'system'" (click)="setTheme('system')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+          <span>System</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sign Out Action -->
+  <div class="sign-out-container mb-4">
+    <button type="button" class="btn btn-secondary btn-block text-danger py-3" (click)="onLogout()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <polyline points="16 17 21 12 16 7"></polyline>
+        <line x1="21" y1="12" x2="9" y2="12"></line>
+      </svg>
+      Sign Out of Finance Tracker
+    </button>
+  </div>
+
+  <!-- ================= Modal: Gemini AI API Key Configuration ================= -->
+  <div *ngIf="showKeyModal" class="modal-backdrop-custom animate-fade-in">
+    <div class="modal-card">
+      <div class="modal-header d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+          <div class="item-icon-box bg-purple-subtle text-purple" style="width:32px; height:32px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5L10 10l1.5 1.5L9 14l-2-2-5 5v3h3l5-5-2-2 2.5-2.5L12 12l2.5-2.5 1.5 1.5L19 8l1.5-1.5L22 5l-1-3z"></path>
+            </svg>
+          </div>
+          <h4 class="m-0 font-weight-bold fs-base">Gemini AI API Key</h4>
+        </div>
+        <button type="button" class="btn-close" (click)="closeKeyModal()" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Status indicator card -->
+        <div class="p-3 mb-3 rounded" [ngClass]="hasCustomKey ? 'bg-success-subtle border border-success' : 'bg-subtle border'">
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <span class="small font-weight-bold">Current Active Key:</span>
+            <span class="badge" [ngClass]="hasCustomKey ? 'bg-success text-white' : 'bg-primary text-white'">
+              {{ hasCustomKey ? '● Custom Key Active' : '● System Default Key' }}
+            </span>
+          </div>
+          <div class="text-secondary small font-monospace">
+            {{ hasCustomKey ? ('AIzaSy...' + apiKeyInput.slice(-6)) : (keyStatus?.maskedKey || 'System Default Key') }}
+          </div>
+        </div>
+
+        <p class="text-secondary small mb-3">
+          If you exceed Google Gemini's free tier rate limits or hit upload errors while scanning multi-page receipts, enter your personal Gemini API key here. All scans from your device will use this key.
+        </p>
+
+        <!-- API Key Input -->
+        <div class="form-group mb-3">
+          <label class="form-label small font-weight-bold" for="geminiApiKey">Gemini API Key *</label>
+          <div class="d-flex gap-2">
+            <input
+              [type]="showKeyText ? 'text' : 'password'"
+              id="geminiApiKey"
+              class="form-control font-monospace"
+              placeholder="AIzaSy..."
+              [(ngModel)]="apiKeyInput"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm flex-shrink-0"
+              (click)="toggleKeyText()"
+              title="Toggle visibility"
+            >
+              {{ showKeyText ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+          <div class="text-secondary extra-small mt-1">
+            Get a free Gemini API key with generous free tier quotas at
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-primary font-weight-bold">
+              Google AI Studio &nearr;
+            </a>
+          </div>
+        </div>
+
+        <!-- Verification Status Feedback -->
+        <div *ngIf="testStatus" class="alert mb-3 py-2 small" [ngClass]="testStatus.success ? 'alert-success' : 'alert-danger'">
+          {{ testStatus.message }}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-4 pt-3 border-top">
+          <div>
+            <button
+              type="button"
+              class="btn btn-sm btn-link text-danger p-0"
+              (click)="resetApiKey()"
+              *ngIf="hasCustomKey"
+            >
+              Reset to Default Key
+            </button>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <button
+              type="button"
+              class="btn btn-sm btn-secondary"
+              (click)="testApiKey()"
+              [disabled]="testingKey || !apiKeyInput.trim()"
+            >
+              {{ testingKey ? 'Verifying...' : '⚡ Test Key' }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-primary"
+              (click)="saveApiKey()"
+              [disabled]="savingKey || !apiKeyInput.trim()"
+            >
+              {{ savingKey ? 'Saving...' : 'Save &amp; Activate' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

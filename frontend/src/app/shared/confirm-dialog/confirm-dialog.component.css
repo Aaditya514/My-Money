@@ -1,0 +1,206 @@
+/* ==========================================================================
+   Confirm & Alert Dialog Styles — Modern Fintech Bottom Sheet & Modal
+   ========================================================================== */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.dialog-card {
+  width: 100%;
+  max-width: 440px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dialog-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Icon Containers */
+.dialog-icon-wrapper {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+  flex-shrink: 0;
+}
+
+.icon-danger {
+  background-color: var(--expense-subtle);
+  color: var(--expense);
+  border: 1px solid var(--expense-border);
+}
+
+.icon-warning {
+  background-color: var(--warning-subtle);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+
+.icon-info {
+  background-color: var(--info-subtle);
+  color: var(--info);
+  border: 1px solid var(--info-border);
+}
+
+.icon-primary {
+  background-color: var(--primary-subtle);
+  color: var(--primary);
+  border: 1px solid var(--primary-border);
+}
+
+/* Text Content */
+.dialog-text {
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.dialog-title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: var(--space-2);
+  letter-spacing: -0.01em;
+}
+
+.dialog-message {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+  white-space: pre-line;
+  margin: 0;
+  padding: 0 8px;
+}
+
+/* Action Buttons */
+.dialog-actions {
+  display: flex;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.dialog-btn {
+  flex: 1;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: var(--fs-base);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dialog-btn:active {
+  transform: scale(0.98);
+}
+
+.sheet-pill {
+  width: 36px;
+  height: 4px;
+  background-color: var(--slate-300);
+  border-radius: var(--radius-pill);
+  margin: 10px auto 4px;
+}
+
+[data-theme="dark"] .dialog-card,
+body.dark-theme .dialog-card {
+  background-color: #111827;
+  border-color: #26334a;
+}
+
+[data-theme="dark"] .sheet-pill,
+body.dark-theme .sheet-pill {
+  background-color: #3b4d66;
+}
+
+/* Animations */
+.animate-fade-in {
+  animation: dialogFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-in {
+  animation: dialogScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes dialogFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialogScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Mobile Bottom Sheet for Phone Viewports (e.g. Realme Android) */
+@media (max-width: 640px) {
+  .dialog-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .dialog-card {
+    max-width: 100%;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    border-bottom: none;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.35);
+    padding-bottom: env(safe-area-inset-bottom, 12px);
+  }
+
+  .dialog-body {
+    padding: 16px 20px 24px;
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+    gap: var(--space-2);
+  }
+
+  .dialog-btn {
+    width: 100%;
+  }
+
+  @keyframes dialogScaleIn {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
