@@ -42,7 +42,7 @@ databases:
   # 3. Managed PostgreSQL Database (Render Free Tier)
   # =============================================================
   - name: finance-tracker-db
-    databaseName: finance_db
-    user: postgres
+    databaseName: finance_tracker_db
+    user: financetracker_user
     plan: free
     region: oregon
