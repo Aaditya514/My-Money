@@ -1,6 +1,35 @@
 # 💰 Full-Stack Personal Finance Tracker & AI Receipt Scanner
 
-A modern, full-stack personal finance web application built with **Angular 18**, **Spring Boot 3.3.2**, **MySQL / H2 Database**, and integrated with **Google Gemini AI** for automated receipt & invoice scanning.
+A modern, full-stack personal finance web application built with **Angular 18**, **Spring Boot 3.3.2**, **PostgreSQL / MySQL / H2 Database**, and integrated with **Google Gemini AI** for automated receipt & invoice scanning.
+
+<p align="center">
+  <a href="https://github.com/Aaditya514/My-Money/releases/latest">
+    <img src="https://img.shields.io/badge/Download-Android%20APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download Android APK" />
+  </a>
+  <a href="https://github.com/Aaditya514/My-Money/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/Aaditya514/My-Money/ci.yml?branch=main&style=for-the-badge&label=CI%20Build" alt="CI Build Status" />
+  </a>
+  <img src="https://img.shields.io/badge/Angular-18-DD0031?style=for-the-badge&logo=angular&logoColor=white" alt="Angular 18" />
+  <img src="https://img.shields.io/badge/Spring%20Boot-3.3.2-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot" />
+</p>
+
+---
+
+## 📱 Mobile App Download (Android APK)
+
+Install the Finance Tracker directly on your Android phone to track expenses on the go and scan bills with your phone camera!
+
+### 📥 [👉 Click Here to Download Latest Android APK](https://github.com/Aaditya514/My-Money/releases/latest)
+
+> **Direct APK File Link**: [Download `finance-tracker.apk`](https://github.com/Aaditya514/My-Money/releases/latest/download/finance-tracker.apk)
+
+#### 📲 How to Install on Your Android Phone:
+1. Tap the **Download APK** link above on your phone's browser.
+2. Once downloaded, tap the file in your notification bar or **Files / Downloads** app.
+3. If prompted with *"Install unknown apps"*, tap **Settings** and toggle **"Allow from this source"**.
+4. Tap **Install** and open **Finance Tracker**!
+
+> 💡 **Instant Install (PWA Alternative)**: You can also visit the web app in Chrome (Android) or Safari (iOS) and select **"Add to Home Screen"** or **"Install App"** to install the Progressive Web App with offline support without downloading an APK.
 
 ---
 
