@@ -18,15 +18,18 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final OtpService otpService;
+    private final SmsService smsService;
 
     public UserService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       OtpService otpService) {
+                       OtpService otpService,
+                       SmsService smsService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.otpService = otpService;
+        this.smsService = smsService;
     }
 
     /**
@@ -43,7 +46,13 @@ public class UserService {
         }
 
         String otp = otpService.generateOtp(cleanPhone);
-        return new SendOtpResponse(true, "OTP generated successfully for " + cleanPhone, cleanPhone, otp);
+        boolean smsSent = smsService.sendOtpSms(cleanPhone, otp);
+
+        if (smsSent) {
+            return new SendOtpResponse(true, "OTP sent via SMS to +91 " + cleanPhone, cleanPhone, null);
+        } else {
+            return new SendOtpResponse(true, "OTP generated successfully for " + cleanPhone, cleanPhone, otp);
+        }
     }
 
     /**
