@@ -59,7 +59,11 @@ export class LoginComponent {
       },
       error: (err) => {
         this.loading = false;
-        this.errorMessage = err.error?.message || 'Invalid email or password.';
+        if (err.status === 0) {
+          this.errorMessage = 'Backend service is starting up (Render free tier spin-up takes ~50s). Please wait a moment and try again.';
+        } else {
+          this.errorMessage = err.error?.message || 'Invalid email or password.';
+        }
       }
     });
   }

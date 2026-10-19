@@ -134,7 +134,11 @@ export class RegisterComponent implements OnDestroy {
       },
       error: (err) => {
         this.loading = false;
-        this.errorMessage = err.error?.message || 'Unable to send OTP. Please check your phone number.';
+        if (err.status === 0) {
+          this.errorMessage = 'Backend service is starting up (Render free tier spin-up takes ~50s). Please wait a moment and click "Send OTP Verification" again.';
+        } else {
+          this.errorMessage = err.error?.message || 'Unable to send OTP. Please check your phone number.';
+        }
       }
     });
   }
@@ -158,7 +162,11 @@ export class RegisterComponent implements OnDestroy {
       },
       error: (err) => {
         this.loading = false;
-        this.errorMessage = err.error?.message || 'Failed to resend OTP.';
+        if (err.status === 0) {
+          this.errorMessage = 'Backend service is starting up. Please try resending in a few moments.';
+        } else {
+          this.errorMessage = err.error?.message || 'Failed to resend OTP.';
+        }
       }
     });
   }
@@ -204,7 +212,11 @@ export class RegisterComponent implements OnDestroy {
       },
       error: (err) => {
         this.loading = false;
-        this.errorMessage = err.error?.message || 'Registration failed. Please check the OTP and try again.';
+        if (err.status === 0) {
+          this.errorMessage = 'Cannot reach backend server. Please check connection and try again.';
+        } else {
+          this.errorMessage = err.error?.message || 'Registration failed. Please check the OTP and try again.';
+        }
       }
     });
   }
