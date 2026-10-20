@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -25,7 +25,7 @@ export interface ReceiptPhoto {
   templateUrl: './ai-scanner.component.html',
   styleUrls: ['./ai-scanner.component.css']
 })
-export class AiScannerComponent implements OnInit {
+export class AiScannerComponent implements OnInit, OnDestroy {
   activeTab: 'image' | 'text' = 'image';
 
   // Multi-Photo Receipt Upload State
@@ -155,7 +155,7 @@ export class AiScannerComponent implements OnInit {
     }
   }
 
-  handleFiles(files: File[]): void {
+  async handleFiles(files: File[]): Promise<void> {
     const validImageFiles = files.filter((f) => f.type.startsWith('image/'));
     if (validImageFiles.length === 0) {
       this.errorMessage = 'Please upload valid image files (PNG, JPG, JPEG, WEBP).';
@@ -171,21 +171,104 @@ export class AiScannerComponent implements OnInit {
       );
       if (exists) continue;
 
-      const reader = new FileReader();
-      reader.onload = () => {
+      try {
+        const processedFile = await this.compressImage(file);
+        const previewUrl = URL.createObjectURL(processedFile);
+
+        this.selectedPhotos.push({
+          file: processedFile,
+          previewUrl,
+          name: processedFile.name,
+          sizeFormatted: this.formatFileSize(processedFile.size)
+        });
+      } catch (e) {
+        // Fallback to original file
+        const previewUrl = URL.createObjectURL(file);
         this.selectedPhotos.push({
           file,
-          previewUrl: reader.result as string,
+          previewUrl,
           name: file.name,
           sizeFormatted: this.formatFileSize(file.size)
         });
-      };
-      reader.readAsDataURL(file);
+      }
     }
   }
 
+  /**
+   * Resizes large camera photos down to 1600px max dimension on an off-screen canvas.
+   * Compresses 15MB 48MP camera images into lightweight ~300KB JPEGs to prevent mobile memory crashes.
+   */
+  private compressImage(file: File): Promise<File> {
+    return new Promise((resolve) => {
+      // Skip files already under 1MB
+      if (file.size < 1024 * 1024) {
+        resolve(file);
+        return;
+      }
+
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const maxDimension = 1600;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob && blob.size < file.size) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              });
+              resolve(compressedFile);
+            } else {
+              resolve(file);
+            }
+          },
+          'image/jpeg',
+          0.82
+        );
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
+
+      img.src = objectUrl;
+    });
+  }
+
   removePhoto(index: number): void {
-    this.selectedPhotos.splice(index, 1);
+    if (index >= 0 && index < this.selectedPhotos.length) {
+      const photo = this.selectedPhotos[index];
+      if (photo.previewUrl && photo.previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(photo.previewUrl);
+      }
+      this.selectedPhotos.splice(index, 1);
+    }
     if (this.selectedPhotos.length === 0) {
       this.errorMessage = '';
       this.isQuotaError = false;
@@ -193,11 +276,24 @@ export class AiScannerComponent implements OnInit {
   }
 
   clearAllPhotos(): void {
+    for (const photo of this.selectedPhotos) {
+      if (photo.previewUrl && photo.previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(photo.previewUrl);
+      }
+    }
     this.selectedPhotos = [];
     this.scanSuccess = false;
     this.aiResponse = null;
     this.errorMessage = '';
     this.isQuotaError = false;
+  }
+
+  ngOnDestroy(): void {
+    for (const photo of this.selectedPhotos) {
+      if (photo.previewUrl && photo.previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(photo.previewUrl);
+      }
+    }
   }
 
   formatFileSize(bytes: number): string {
