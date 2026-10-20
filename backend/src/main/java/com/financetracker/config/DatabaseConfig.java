@@ -41,7 +41,17 @@ public class DatabaseConfig {
         HikariDataSource ds = new HikariDataSource();
         ds.setConnectionTimeout(10000); // 10s fail-fast timeout
 
-        String url = (rawUrl != null) ? rawUrl.trim() : "";
+        String url = null;
+        for (String envKey : java.util.List.of("DATABASE_URL", "SPRING_DATASOURCE_URL", "POSTGRES_URL", "POSTGRESQL_URL")) {
+            String val = System.getenv(envKey);
+            if (val != null && !val.trim().isEmpty()) {
+                url = val.trim();
+                break;
+            }
+        }
+        if (url == null || url.isEmpty()) {
+            url = (rawUrl != null) ? rawUrl.trim() : "";
+        }
         boolean isCloud = System.getenv("RENDER") != null || System.getenv("PORT") != null || System.getenv("RAILWAY_ENVIRONMENT") != null;
 
         // 1. Detect cloud PaaS DATABASE_URL format (postgres:// or postgresql://)
