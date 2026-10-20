@@ -9,6 +9,8 @@ import com.financetracker.entity.Category;
 import com.financetracker.entity.CategoryType;
 import com.financetracker.entity.TransactionType;
 import com.financetracker.repository.CategoryRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -34,10 +36,12 @@ import java.util.stream.Collectors;
 @Service
 public class AiBillScannerService {
 
+    private static final Logger log = LoggerFactory.getLogger(AiBillScannerService.class);
+
     @Value("${gemini.api.key:}")
     private String apiKey;
 
-    @Value("${gemini.model:gemini-3.6-flash}")
+    @Value("${gemini.model:gemini-2.5-flash}")
     private String modelName;
 
     @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models}")
@@ -290,6 +294,57 @@ public class AiBillScannerService {
         }
     }
 
+    /**
+     * Executes the Gemini generateContent call with automatic model fallback.
+     * Tries configured model first, and if a 404 is encountered (e.g. deprecated model),
+     * automatically cycles through supported fallback models (gemini-2.5-flash, gemini-2.0-flash, gemini-2.5-flash-lite).
+     */
+    private ResponseEntity<String> executeWithModelFallback(Map<String, Object> requestBody, String keyToUse) {
+        List<String> modelsToTry = new ArrayList<>();
+        if (modelName != null && !modelName.isBlank()) {
+            modelsToTry.add(modelName.trim());
+        }
+        for (String m : List.of("gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite")) {
+            if (!modelsToTry.contains(m)) {
+                modelsToTry.add(m);
+            }
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+        Exception lastException = null;
+        for (String candidate : modelsToTry) {
+            String endpoint = String.format("%s/%s:generateContent?key=%s", apiUrl, candidate, keyToUse);
+            try {
+                ResponseEntity<String> response = restTemplate.postForEntity(endpoint, entity, String.class);
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    if (!candidate.equals(this.modelName)) {
+                        log.info("Gemini model switched to working model: {}", candidate);
+                        this.modelName = candidate;
+                    }
+                    return response;
+                }
+            } catch (org.springframework.web.client.HttpClientErrorException e) {
+                lastException = e;
+                if (e.getStatusCode().value() == 404) {
+                    log.warn("Gemini model '{}' not found (404), trying fallback model...", candidate);
+                    continue;
+                }
+                throw e; // Non-404 error (e.g. 400 Bad Request, 403 Invalid Key, 429 Quota Exceeded)
+            } catch (Exception e) {
+                lastException = e;
+                log.warn("Error calling Gemini model '{}': {}", candidate, e.getMessage());
+            }
+        }
+
+        if (lastException instanceof RuntimeException re) {
+            throw re;
+        }
+        throw new RuntimeException("Gemini AI request failed across candidate models: " + (lastException != null ? lastException.getMessage() : "Unknown error"), lastException);
+    }
+
     public Map<String, Object> testApiKey(String keyToTest) {
         String key = (keyToTest != null && !keyToTest.trim().isEmpty()) ? keyToTest.trim() : getEffectiveApiKey(null);
         if (key == null || key.trim().isEmpty()) {
@@ -297,16 +352,10 @@ public class AiBillScannerService {
         }
 
         try {
-            String endpoint = String.format("%s/%s:generateContent?key=%s", apiUrl, modelName, key);
             Map<String, Object> requestBody = Map.of(
                     "contents", List.of(Map.of("parts", List.of(Map.of("text", "Respond with 'OK'"))))
             );
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(endpoint, entity, String.class);
+            ResponseEntity<String> response = executeWithModelFallback(requestBody, key);
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 return Map.of("valid", true, "model", modelName, "message", "API Key is valid and working!");
@@ -327,18 +376,7 @@ public class AiBillScannerService {
             throw new IllegalStateException("Gemini API key is not configured. Please add your API key in settings.");
         }
 
-        String endpoint = String.format("%s/%s:generateContent?key=%s", apiUrl, modelName, keyToUse);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-        ResponseEntity<String> response = restTemplate.postForEntity(endpoint, entity, String.class);
-
-        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-            throw new RuntimeException("Gemini API returned status: " + response.getStatusCode());
-        }
+        ResponseEntity<String> response = executeWithModelFallback(requestBody, keyToUse);
 
         // Parse Gemini top-level JSON response
         JsonNode rootNode = objectMapper.readTree(response.getBody());
@@ -574,17 +612,7 @@ public class AiBillScannerService {
             throw new IllegalStateException("Gemini API key is not configured. Please add your API key in settings.");
         }
 
-        String endpoint = String.format("%s/%s:generateContent?key=%s", apiUrl, modelName, keyToUse);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-        ResponseEntity<String> response = restTemplate.postForEntity(endpoint, entity, String.class);
-
-        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-            throw new RuntimeException("Gemini API returned status: " + response.getStatusCode());
-        }
+        ResponseEntity<String> response = executeWithModelFallback(requestBody, keyToUse);
 
         JsonNode rootNode = objectMapper.readTree(response.getBody());
         JsonNode candidates = rootNode.path("candidates");
