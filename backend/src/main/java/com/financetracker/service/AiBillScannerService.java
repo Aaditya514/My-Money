@@ -41,7 +41,7 @@ public class AiBillScannerService {
     @Value("${gemini.api.key:}")
     private String apiKey;
 
-    @Value("${gemini.model:gemini-2.5-flash}")
+    @Value("${gemini.model:gemini-3.5-flash-lite}")
     private String modelName;
 
     @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models}")
@@ -304,7 +304,7 @@ public class AiBillScannerService {
         if (modelName != null && !modelName.isBlank()) {
             modelsToTry.add(modelName.trim());
         }
-        for (String m : List.of("gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite")) {
+        for (String m : List.of("gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.5-flash-lite")) {
             if (!modelsToTry.contains(m)) {
                 modelsToTry.add(m);
             }
