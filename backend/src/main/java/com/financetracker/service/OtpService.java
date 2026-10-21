@@ -41,36 +41,48 @@ public class OtpService {
     }
 
     /**
+     * Normalizes either an email address (lowercased) or a phone number (10 digits)
+     */
+    public String normalizeTarget(String target) {
+        if (target == null) return "";
+        String trimmed = target.trim();
+        if (trimmed.contains("@")) {
+            return trimmed.toLowerCase();
+        }
+        return normalizePhoneNumber(trimmed);
+    }
+
+    /**
      * Generates a 6-digit numeric OTP valid for 10 minutes
      */
-    public String generateOtp(String phoneNumber) {
-        String cleanPhone = normalizePhoneNumber(phoneNumber);
+    public String generateOtp(String target) {
+        String cleanTarget = normalizeTarget(target);
         int num = 100000 + random.nextInt(900000);
         String code = String.valueOf(num);
 
-        otpStorage.put(cleanPhone, new OtpEntry(code, Instant.now().plusSeconds(OTP_VALIDITY_SECONDS)));
+        otpStorage.put(cleanTarget, new OtpEntry(code, Instant.now().plusSeconds(OTP_VALIDITY_SECONDS)));
         return code;
     }
 
     /**
      * Verifies provided OTP against stored active entry
      */
-    public boolean verifyOtp(String phoneNumber, String code) {
-        String cleanPhone = normalizePhoneNumber(phoneNumber);
-        if (cleanPhone.isEmpty() || code == null) return false;
+    public boolean verifyOtp(String target, String code) {
+        String cleanTarget = normalizeTarget(target);
+        if (cleanTarget.isEmpty() || code == null) return false;
 
-        OtpEntry entry = otpStorage.get(cleanPhone);
+        OtpEntry entry = otpStorage.get(cleanTarget);
         if (entry == null) {
             return false;
         }
 
         if (entry.isExpired()) {
-            otpStorage.remove(cleanPhone);
+            otpStorage.remove(cleanTarget);
             return false;
         }
 
         if (entry.code.equals(code.trim())) {
-            otpStorage.remove(cleanPhone); // One-time use
+            otpStorage.remove(cleanTarget); // One-time use
             return true;
         }
 
@@ -80,9 +92,9 @@ public class OtpService {
     /**
      * Retrieves currently active OTP for demo/testing display
      */
-    public String getActiveOtp(String phoneNumber) {
-        String cleanPhone = normalizePhoneNumber(phoneNumber);
-        OtpEntry entry = otpStorage.get(cleanPhone);
+    public String getActiveOtp(String target) {
+        String cleanTarget = normalizeTarget(target);
+        OtpEntry entry = otpStorage.get(cleanTarget);
         if (entry != null && !entry.isExpired()) {
             return entry.code;
         }

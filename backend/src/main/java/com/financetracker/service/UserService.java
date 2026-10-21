@@ -19,44 +19,76 @@ public class UserService {
     private final JwtService jwtService;
     private final OtpService otpService;
     private final SmsService smsService;
+    private final EmailService emailService;
 
     public UserService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        OtpService otpService,
-                       SmsService smsService) {
+                       SmsService smsService,
+                       EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.otpService = otpService;
         this.smsService = smsService;
+        this.emailService = emailService;
     }
 
     /**
-     * Sends a 6-digit registration OTP to the provided 10-digit phone number
+     * Sends a 6-digit registration OTP to either the provided email or 10-digit phone number
      */
     public SendOtpResponse sendRegistrationOtp(SendOtpRequest request) {
-        String cleanPhone = otpService.normalizePhoneNumber(request.getPhoneNumber());
-        if (cleanPhone.length() != 10) {
-            throw new RuntimeException("Phone number must be exactly 10 digits.");
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : null;
+        String phone = request.getPhoneNumber() != null ? otpService.normalizePhoneNumber(request.getPhoneNumber()) : null;
+
+        if ((email == null || email.isBlank()) && (phone == null || phone.isBlank())) {
+            throw new RuntimeException("Please provide an email address or mobile number to receive OTP.");
         }
 
-        if (userRepository.existsByPhoneNumber(cleanPhone)) {
-            throw new RuntimeException("Phone number " + cleanPhone + " is already registered. Please login instead.");
+        // Priority 1: Email OTP (if email is provided)
+        if (email != null && !email.isBlank()) {
+            if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                throw new RuntimeException("Please provide a valid email address.");
+            }
+            if (userRepository.existsByEmail(email)) {
+                throw new RuntimeException("Email address " + email + " is already registered. Please login instead.");
+            }
+
+            String otp = otpService.generateOtp(email);
+            boolean sent = emailService.sendOtpEmail(email, otp);
+
+            if (sent) {
+                return new SendOtpResponse(true, "Verification code sent to " + email, phone, email, "EMAIL", null);
+            } else {
+                return new SendOtpResponse(true, "OTP generated for " + email, phone, email, "EMAIL", otp);
+            }
         }
 
-        String otp = otpService.generateOtp(cleanPhone);
-        boolean smsSent = smsService.sendOtpSms(cleanPhone, otp);
+        // Priority 2: Phone OTP (if phone is provided and no email)
+        if (phone != null && !phone.isBlank()) {
+            if (phone.length() != 10) {
+                throw new RuntimeException("Phone number must be exactly 10 digits.");
+            }
+            if (userRepository.existsByPhoneNumber(phone)) {
+                throw new RuntimeException("Phone number " + phone + " is already registered. Please login instead.");
+            }
 
-        if (smsSent) {
-            return new SendOtpResponse(true, "OTP sent via SMS to +91 " + cleanPhone, cleanPhone, null);
-        } else {
-            return new SendOtpResponse(true, "OTP generated successfully for " + cleanPhone, cleanPhone, otp);
+            String otp = otpService.generateOtp(phone);
+            boolean smsSent = smsService.sendOtpSms(phone, otp);
+
+            if (smsSent) {
+                return new SendOtpResponse(true, "OTP sent via SMS to +91 " + phone, phone, null, "SMS", null);
+            } else {
+                return new SendOtpResponse(true, "OTP generated successfully for " + phone, phone, null, "SMS", otp);
+            }
         }
+
+        throw new RuntimeException("Please provide an email or phone number.");
     }
 
     /**
-     * Registers a new user with 10-digit phone number, name, password, and verified OTP
+     * Registers a new user with verified OTP (via email or phone), name, and password
      */
     public AuthResponse register(RegisterRequest request) {
         String cleanPhone = null;
@@ -68,12 +100,6 @@ public class UserService {
 
             if (userRepository.existsByPhoneNumber(cleanPhone)) {
                 throw new RuntimeException("Phone number is already registered. Please login instead.");
-            }
-
-            // Verify OTP
-            boolean isOtpValid = otpService.verifyOtp(cleanPhone, request.getOtp());
-            if (!isOtpValid) {
-                throw new RuntimeException("Invalid or expired OTP. Please re-check or request a new OTP.");
             }
         }
 
@@ -88,6 +114,23 @@ public class UserService {
 
         if (email != null && userRepository.existsByEmail(email)) {
             throw new RuntimeException("Email address is already registered. Please login or use a different email.");
+        }
+
+        // Verify OTP if OTP is provided/required
+        if (request.getOtp() != null && !request.getOtp().isBlank()) {
+            boolean isOtpValid = false;
+            // Check OTP for email first
+            if (email != null && !email.endsWith("@phone.user")) {
+                isOtpValid = otpService.verifyOtp(email, request.getOtp());
+            }
+            // Fallback check OTP for phone
+            if (!isOtpValid && cleanPhone != null) {
+                isOtpValid = otpService.verifyOtp(cleanPhone, request.getOtp());
+            }
+
+            if (!isOtpValid) {
+                throw new RuntimeException("Invalid or expired OTP. Please re-check or request a new OTP.");
+            }
         }
 
         User user = new User();

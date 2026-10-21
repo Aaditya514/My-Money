@@ -127,13 +127,71 @@ public class DatabaseConfig {
             return ds;
         }
 
-        // 4. Local development fallback (localhost PostgreSQL)
+        String effectiveUsername = resolveEnv("SPRING_DATASOURCE_USERNAME", defaultUsername);
+        String effectivePassword = resolveEnv("SPRING_DATASOURCE_PASSWORD", defaultPassword);
+
+        // 4. Local development fallback (localhost PostgreSQL with safe embedded H2 fallback)
         String localJdbcUrl = !url.isEmpty() ? url : "jdbc:postgresql://localhost:5432/finance_db";
-        ds.setJdbcUrl(localJdbcUrl);
-        ds.setUsername(defaultUsername);
-        ds.setPassword(defaultPassword);
-        ds.setDriverClassName("org.postgresql.Driver");
-        log.info("Configured local PostgreSQL DataSource: {}", localJdbcUrl);
+        boolean postgresWorking = false;
+        try {
+            Class.forName("org.postgresql.Driver");
+            try (java.sql.Connection conn = java.sql.DriverManager.getConnection(localJdbcUrl, effectiveUsername, effectivePassword)) {
+                postgresWorking = true;
+            }
+        } catch (Exception ex) {
+            log.warn("Local PostgreSQL connection test failed: {}", ex.getMessage());
+        }
+
+        if (postgresWorking) {
+            ds.setJdbcUrl(localJdbcUrl);
+            ds.setUsername(effectiveUsername);
+            ds.setPassword(effectivePassword);
+            ds.setDriverClassName("org.postgresql.Driver");
+            log.info("Configured local PostgreSQL DataSource: {}", localJdbcUrl);
+            return ds;
+        }
+
+        // 5. Embedded local persistent H2 Fallback
+        log.warn("=== LOCAL POSTGRESQL NOT ACCESSIBLE ===");
+        log.warn("Starting with embedded local file-backed H2 database (PostgreSQL mode) for zero-config persistence.");
+        log.warn("Data will be safely stored in backend/data/finance_db");
+        log.warn("=======================================");
+        new java.io.File("./data").mkdirs();
+        String h2Url = "jdbc:h2:file:./data/finance_db;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE;MODE=PostgreSQL";
+        ds.setJdbcUrl(h2Url);
+        ds.setUsername("sa");
+        ds.setPassword("");
+        ds.setDriverClassName("org.h2.Driver");
         return ds;
+    }
+
+    private String resolveEnv(String key, String defaultValue) {
+        String val = System.getenv(key);
+        if (val != null && !val.trim().isEmpty()) {
+            return val.trim();
+        }
+        val = System.getProperty(key);
+        if (val != null && !val.trim().isEmpty()) {
+            return val.trim();
+        }
+        for (String envPath : java.util.List.of(".env", "../.env", "backend/.env")) {
+            java.io.File file = new java.io.File(envPath);
+            if (file.exists() && file.isFile()) {
+                try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(file))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (line.startsWith("#") || !line.contains("=")) continue;
+                        int eq = line.indexOf('=');
+                        String k = line.substring(0, eq).trim();
+                        String v = line.substring(eq + 1).trim();
+                        if (k.equalsIgnoreCase(key)) {
+                            return v;
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+        return defaultValue;
     }
 }

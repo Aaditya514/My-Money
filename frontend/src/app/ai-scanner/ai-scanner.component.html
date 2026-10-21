@@ -246,6 +246,21 @@
 
       <!-- Scan Action CTA -->
       <div class="scan-action-bar mt-4 pt-3 border-top">
+        <!-- Prototype Laser Scan Progress Visual -->
+        <div class="panel my-3 p-4 text-center animate-fade-in bg-surface-subtle" *ngIf="scanning">
+          <div class="rcpt mx-auto mb-3" style="max-width: 280px; text-align: left;">
+            <div class="scanline"></div>
+            <div class="t">RECEIPT / INVOICE</div>
+            <div class="l"><span>Merchant</span><b class="n">Extracting...</b></div>
+            <div class="l"><span>Line items</span><span class="n">Detecting...</span></div>
+            <div class="l"><span>Taxes &amp; fees</span><span class="n">Calculating...</span></div>
+            <div class="border-top my-2"></div>
+            <div class="l"><b>TOTAL AMOUNT</b><b class="n text-income">Reading...</b></div>
+          </div>
+          <div class="fw-bold fs-6 mb-1 text-primary">{{ scanProgressText || 'Gemini AI is reading receipt...' }}</div>
+          <p class="text-muted small mb-0">Extracting merchant, line items, tax, and auto-matching budget category</p>
+        </div>
+
         <button
           type="button"
           class="btn btn-primary btn-block"
@@ -257,7 +272,7 @@
           </span>
           <span *ngIf="scanning" class="d-inline-flex align-items-center gap-2">
             <span class="spinner-border spinner-border-sm" role="status"></span>
-            {{ scanProgressText }}
+            Processing with Gemini AI...
           </span>
         </button>
       </div>

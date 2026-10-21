@@ -27,7 +27,7 @@ public class AuthController {
             SendOtpResponse response = userService.sendRegistrationOtp(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            return new ResponseEntity<>(new SendOtpResponse(false, e.getMessage(), request.getPhoneNumber(), null), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(new SendOtpResponse(false, e.getMessage(), request.getPhoneNumber(), request.getEmail(), null, null), HttpStatus.BAD_REQUEST);
         }
     }
 

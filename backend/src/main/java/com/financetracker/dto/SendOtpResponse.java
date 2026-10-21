@@ -5,6 +5,8 @@ public class SendOtpResponse {
     private boolean success;
     private String message;
     private String phoneNumber;
+    private String email;
+    private String destination; // "EMAIL" or "SMS"
     private String simulatedOtp;
 
     public SendOtpResponse() {
@@ -14,6 +16,16 @@ public class SendOtpResponse {
         this.success = success;
         this.message = message;
         this.phoneNumber = phoneNumber;
+        this.simulatedOtp = simulatedOtp;
+        this.destination = "SMS";
+    }
+
+    public SendOtpResponse(boolean success, String message, String phoneNumber, String email, String destination, String simulatedOtp) {
+        this.success = success;
+        this.message = message;
+        this.phoneNumber = phoneNumber;
+        this.email = email;
+        this.destination = destination;
         this.simulatedOtp = simulatedOtp;
     }
 
@@ -39,6 +51,22 @@ public class SendOtpResponse {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getDestination() {
+        return destination;
+    }
+
+    public void setDestination(String destination) {
+        this.destination = destination;
     }
 
     public String getSimulatedOtp() {

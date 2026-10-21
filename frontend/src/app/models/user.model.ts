@@ -13,21 +13,24 @@ export interface LoginRequest {
 
 export interface RegisterRequest {
   name: string;
-  phoneNumber: string;
+  phoneNumber?: string;
   password: string;
-  otp: string;
+  otp?: string;
   email?: string;
 }
 
 export interface SendOtpRequest {
-  phoneNumber: string;
+  phoneNumber?: string;
+  email?: string;
   purpose?: string;
 }
 
 export interface SendOtpResponse {
   success: boolean;
   message: string;
-  phoneNumber: string;
+  phoneNumber?: string;
+  email?: string;
+  destination?: string;
   simulatedOtp?: string;
 }
 

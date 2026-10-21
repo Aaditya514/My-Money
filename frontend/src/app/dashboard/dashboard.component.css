@@ -2,6 +2,17 @@
    Dashboard Component Styles
    ========================================================================== */
 
+.hero {
+  padding: 20px 22px 18px;
+}
+.hero .amt {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-top: 4px;
+}
+
 /* Month Selector */
 .month-selector {
   display: inline-flex;

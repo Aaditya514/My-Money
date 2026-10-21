@@ -32,6 +32,7 @@ export class TransactionListComponent implements OnInit {
   customStartDate: string = '';
   customEndDate: string = '';
 
+  sheetFilterOpen: boolean = false;
   loading: boolean = true;
   successMessage: string = '';
   errorMessage: string = '';
@@ -167,6 +168,37 @@ export class TransactionListComponent implements OnInit {
 
   printStatement(): void {
     this.exportService.printCurrentPage();
+  }
+
+  activeFilterCount(): number {
+    let count = 0;
+    if (this.selectedType !== 'ALL') count++;
+    if (this.selectedCategoryId !== 'ALL') count++;
+    if (this.datePreset !== 'ALL' || this.customStartDate || this.customEndDate) count++;
+    return count;
+  }
+
+  clearAllFilters(): void {
+    this.selectedType = 'ALL';
+    this.selectedCategoryId = 'ALL';
+    this.setPreset('ALL');
+    this.searchTerm = '';
+    this.applyFilters();
+  }
+
+  getCategoryIcon(catName: string | undefined): string {
+    const name = (catName || '').toLowerCase();
+    if (name.includes('food') || name.includes('dining') || name.includes('restaurant')) return 'utensils';
+    if (name.includes('groc') || name.includes('supermarket') || name.includes('market')) return 'cart';
+    if (name.includes('transport') || name.includes('fuel') || name.includes('cab') || name.includes('auto') || name.includes('travel')) return 'car';
+    if (name.includes('shop') || name.includes('cloth') || name.includes('mall') || name.includes('amazon')) return 'bag';
+    if (name.includes('util') || name.includes('bill') || name.includes('electric') || name.includes('recharge') || name.includes('wifi')) return 'zap';
+    if (name.includes('movie') || name.includes('entertain') || name.includes('netflix') || name.includes('game')) return 'film';
+    if (name.includes('health') || name.includes('med') || name.includes('doctor') || name.includes('fitness')) return 'heart';
+    if (name.includes('salary') || name.includes('income') || name.includes('job') || name.includes('bonus') || name.includes('freelance')) return 'brief';
+    if (name.includes('invest') || name.includes('stock') || name.includes('mutual') || name.includes('goal')) return 'target';
+    if (name.includes('subscript') || name.includes('recur') || name.includes('emi') || name.includes('rent')) return 'repeat';
+    return 'layers';
   }
 
   async onDelete(id: number): Promise<void> {

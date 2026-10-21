@@ -32,6 +32,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private categoryChart: Chart | null = null;
   private cashFlowChart: Chart | null = null;
 
+  // Segmented Switcher (Overview vs Activity)
+  activeSegment: 'ov' | 'act' = 'ov';
+
   // Month & Year Filter
   selectedMonth: number;
   selectedYear: number;
@@ -309,5 +312,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
       100,
       Math.round((this.dashboardData.salaryPlan.plannedExpenses / this.dashboardData.salaryPlan.takeHomeSalary) * 100)
     );
+  }
+
+  getInflowRatio(): number {
+    const inc = this.dashboardData?.totalIncome || 0;
+    const exp = this.dashboardData?.totalExpenses || 0;
+    const total = inc + exp;
+    if (total <= 0) return 50;
+    return Math.min(100, Math.max(5, Math.round((inc / total) * 100)));
+  }
+
+  getOutflowRatio(): number {
+    return 100 - this.getInflowRatio();
+  }
+
+  getIntPart(val: number | undefined): string {
+    const n = Math.abs(val || 0);
+    const intStr = Math.floor(n).toLocaleString('en-IN');
+    return intStr;
+  }
+
+  getDecPart(val: number | undefined): string {
+    const n = Math.abs(val || 0);
+    const dec = (n % 1).toFixed(2).slice(1); // e.g. ".00"
+    return dec;
+  }
+
+  getCategoryIcon(catName: string | undefined): string {
+    const name = (catName || '').toLowerCase();
+    if (name.includes('food') || name.includes('dining') || name.includes('restaurant')) return 'utensils';
+    if (name.includes('groc') || name.includes('supermarket') || name.includes('market')) return 'cart';
+    if (name.includes('transport') || name.includes('fuel') || name.includes('cab') || name.includes('auto') || name.includes('travel')) return 'car';
+    if (name.includes('shop') || name.includes('cloth') || name.includes('mall') || name.includes('amazon')) return 'bag';
+    if (name.includes('util') || name.includes('bill') || name.includes('electric') || name.includes('recharge') || name.includes('wifi')) return 'zap';
+    if (name.includes('movie') || name.includes('entertain') || name.includes('netflix') || name.includes('game')) return 'film';
+    if (name.includes('health') || name.includes('med') || name.includes('doctor') || name.includes('fitness')) return 'heart';
+    if (name.includes('salary') || name.includes('income') || name.includes('job') || name.includes('bonus') || name.includes('freelance')) return 'brief';
+    if (name.includes('invest') || name.includes('stock') || name.includes('mutual') || name.includes('goal')) return 'target';
+    if (name.includes('subscript') || name.includes('recur') || name.includes('emi') || name.includes('rent')) return 'repeat';
+    return 'layers';
   }
 }

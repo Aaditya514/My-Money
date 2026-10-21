@@ -75,8 +75,11 @@ export class AuthService {
     return this.getCurrentUser() !== null && !!this.getToken();
   }
 
-  public sendOtp(phoneNumber: string): Observable<SendOtpResponse> {
-    return this.http.post<SendOtpResponse>(`${this.apiUrl}/send-otp`, { phoneNumber });
+  public sendOtp(target: { phoneNumber?: string; email?: string } | string): Observable<SendOtpResponse> {
+    const payload = typeof target === 'string'
+      ? (target.includes('@') ? { email: target } : { phoneNumber: target })
+      : target;
+    return this.http.post<SendOtpResponse>(`${this.apiUrl}/send-otp`, payload);
   }
 
   public register(request: RegisterRequest): Observable<AuthResponse> {

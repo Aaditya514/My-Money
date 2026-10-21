@@ -19,6 +19,8 @@ export class RegisterComponent implements OnDestroy {
   otpStep: boolean = false;
   simulatedOtp: string = '';
   resendCooldown: number = 0;
+  showPassword: boolean = false;
+  showConfirmPassword: boolean = false;
   private cooldownTimer: any = null;
 
   constructor(
@@ -37,13 +39,13 @@ export class RegisterComponent implements OnDestroy {
         Validators.maxLength(50),
         Validators.pattern(/^[a-zA-Z\s'\-]+$/)
       ]],
-      phoneNumber: ['', [
-        Validators.required,
-        Validators.pattern(/^[0-9]{10}$/)
-      ]],
       email: ['', [
+        Validators.required,
         Validators.email,
         Validators.maxLength(100)
+      ]],
+      phoneNumber: ['', [
+        Validators.pattern(/^[0-9]{10}$/)
       ]],
       password: ['', [
         Validators.required,
@@ -93,22 +95,21 @@ export class RegisterComponent implements OnDestroy {
   }
 
   onRequestOtp(): void {
-    // Validate required fields for step 1
     const nameField = this.registerForm.get('name');
+    const emailField = this.registerForm.get('email');
     const phoneField = this.registerForm.get('phoneNumber');
     const passField = this.registerForm.get('password');
     const confirmField = this.registerForm.get('confirmPassword');
-    const emailField = this.registerForm.get('email');
 
     nameField?.markAsTouched();
-    phoneField?.markAsTouched();
+    emailField?.markAsTouched();
+    if (phoneField?.value) {
+      phoneField?.markAsTouched();
+    }
     passField?.markAsTouched();
     confirmField?.markAsTouched();
-    if (emailField?.value) {
-      emailField?.markAsTouched();
-    }
 
-    if (nameField?.invalid || phoneField?.invalid || passField?.invalid || confirmField?.invalid || this.isPasswordMismatch() || (emailField?.value && emailField?.invalid)) {
+    if (nameField?.invalid || emailField?.invalid || (phoneField?.value && phoneField?.invalid) || passField?.invalid || confirmField?.invalid || this.isPasswordMismatch()) {
       return;
     }
 
@@ -116,15 +117,20 @@ export class RegisterComponent implements OnDestroy {
     this.errorMessage = '';
     this.successNotice = '';
 
-    const phone = phoneField?.value?.trim();
+    const email = emailField?.value?.trim().toLowerCase();
 
-    this.authService.sendOtp(phone).subscribe({
+    this.authService.sendOtp({ email }).subscribe({
       next: (res) => {
         this.loading = false;
         if (res.success) {
           this.otpStep = true;
           this.simulatedOtp = res.simulatedOtp || '';
-          this.successNotice = `OTP sent to +91 ${phone}.`;
+          if (this.simulatedOtp) {
+            this.registerForm.patchValue({ otp: this.simulatedOtp });
+            this.successNotice = `Verification code auto-filled (${this.simulatedOtp}). Click Verify & Create Account to continue!`;
+          } else {
+            this.successNotice = `Verification code sent to ${email}. Check your inbox!`;
+          }
           this.startCooldown();
           this.registerForm.get('otp')?.setValidators([Validators.required, Validators.pattern(/^[0-9]{6}$/)]);
           this.registerForm.get('otp')?.updateValueAndValidity();
@@ -135,9 +141,9 @@ export class RegisterComponent implements OnDestroy {
       error: (err) => {
         this.loading = false;
         if (err.status === 0) {
-          this.errorMessage = 'Backend service is starting up (Render free tier spin-up takes ~50s). Please wait a moment and click "Send OTP Verification" again.';
+          this.errorMessage = 'Backend service is starting up (takes ~50s on free tiers). Please wait a moment and try again.';
         } else {
-          this.errorMessage = err.error?.message || 'Unable to send OTP. Please check your phone number.';
+          this.errorMessage = err.error?.message || 'Unable to send OTP. Please check your email.';
         }
       }
     });
@@ -145,18 +151,23 @@ export class RegisterComponent implements OnDestroy {
 
   onResendOtp(): void {
     if (this.resendCooldown > 0) return;
-    const phone = this.registerForm.get('phoneNumber')?.value?.trim();
-    if (!phone) return;
+    const email = this.registerForm.get('email')?.value?.trim().toLowerCase();
+    if (!email) return;
 
     this.loading = true;
     this.errorMessage = '';
 
-    this.authService.sendOtp(phone).subscribe({
+    this.authService.sendOtp({ email }).subscribe({
       next: (res) => {
         this.loading = false;
         if (res.success) {
           this.simulatedOtp = res.simulatedOtp || '';
-          this.successNotice = `New OTP sent to +91 ${phone}.`;
+          if (this.simulatedOtp) {
+            this.registerForm.patchValue({ otp: this.simulatedOtp });
+            this.successNotice = `New verification code auto-filled (${this.simulatedOtp}).`;
+          } else {
+            this.successNotice = `New verification code sent to ${email}.`;
+          }
           this.startCooldown();
         }
       },
@@ -169,6 +180,12 @@ export class RegisterComponent implements OnDestroy {
         }
       }
     });
+  }
+
+  autoFillOtp(): void {
+    if (this.simulatedOtp) {
+      this.registerForm.patchValue({ otp: this.simulatedOtp });
+    }
   }
 
   onBackToDetails(): void {
@@ -199,10 +216,10 @@ export class RegisterComponent implements OnDestroy {
 
     this.authService.register({
       name: name.trim(),
-      phoneNumber: phoneNumber.trim(),
+      email: email.trim().toLowerCase(),
+      phoneNumber: phoneNumber ? phoneNumber.trim() : undefined,
       password,
-      otp: otp.trim(),
-      email: email ? email.trim().toLowerCase() : undefined
+      otp: otp ? otp.trim() : undefined
     }).subscribe({
       next: (response) => {
         this.loading = false;
@@ -215,7 +232,7 @@ export class RegisterComponent implements OnDestroy {
         if (err.status === 0) {
           this.errorMessage = 'Cannot reach backend server. Please check connection and try again.';
         } else {
-          this.errorMessage = err.error?.message || 'Registration failed. Please check the OTP and try again.';
+          this.errorMessage = err.error?.message || 'Registration failed. Please check the code and try again.';
         }
       }
     });

@@ -25,6 +25,13 @@ services:
         sync: false
       - key: TWILIO_PHONE_NUMBER
         value: "+19124931390"
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        value: "ghostrider121322@gmail.com"
+      - key: BREVO_SENDER_NAME
+        value: "Finance Tracker"
+
 
   # =============================================================
   # 2. Angular 18 Frontend Static Site (Render Static Site)

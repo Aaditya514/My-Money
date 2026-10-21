@@ -1,201 +1,210 @@
-<div class="page-container animate-fade-in">
+<div class="page-container animate-fade-in pb-5">
   <!-- Page Header -->
-  <header class="page-header">
-    <div class="page-header-content">
-      <div>
-        <h1 class="page-title">Category Budgets</h1>
-        <p class="page-subtitle">Set monthly category spending allowances and monitor budget utilization</p>
-      </div>
-      <div class="page-actions">
-        <a routerLink="/categories" class="btn btn-secondary btn-sm">Manage Categories</a>
-      </div>
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h1 class="h3 font-bold mb-0 text-slate-900">Budgets</h1>
+      <p class="text-secondary small mb-0">{{ budgets.length }} category allowances tracked</p>
     </div>
-  </header>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-primary btn-sm px-3 text-decoration-none" (click)="cancelEdit(); sheetBudgetOpen = true">
+        <svg class="ic s"><use href="#i-plus"></use></svg>
+        Set Budget
+      </button>
+    </div>
+  </div>
 
   <!-- Alerts -->
-  <div *ngIf="successMessage" class="alert alert-success" role="alert">
-    <span>{{ successMessage }}</span>
-    <button type="button" class="alert-close" (click)="successMessage = ''" aria-label="Dismiss alert">&times;</button>
+  <div *ngIf="successMessage" class="banner i mb-3" role="alert">
+    <svg class="ic s" style="margin-top:2px"><use href="#i-check"></use></svg>
+    <div class="banner-text">{{ successMessage }}</div>
+    <button type="button" class="banner-close" (click)="successMessage = ''" aria-label="Dismiss alert">&times;</button>
   </div>
-  <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
-    <span>{{ errorMessage }}</span>
-    <button type="button" class="alert-close" (click)="errorMessage = ''" aria-label="Dismiss alert">&times;</button>
+  <div *ngIf="errorMessage" class="banner r mb-3" role="alert">
+    <svg class="ic s" style="margin-top:2px"><use href="#i-alert"></use></svg>
+    <div class="banner-text">{{ errorMessage }}</div>
+    <button type="button" class="banner-close" (click)="errorMessage = ''" aria-label="Dismiss alert">&times;</button>
   </div>
 
-  <div class="budget-layout">
-    <!-- Budget Form -->
-    <div class="card form-card">
-      <div class="card-header">
-        <h2 class="card-title mb-0">{{ editingBudgetId ? 'Edit Category Budget' : 'Set Category Budget' }}</h2>
-        <p class="card-subtitle text-secondary small mb-0">Define an upper spending ceiling for a specific category</p>
-      </div>
-
-      <div class="card-body">
-        <form [formGroup]="budgetForm" (ngSubmit)="onSubmit()" novalidate>
-          <!-- Expense Category -->
-          <div class="form-group mb-3">
-            <label for="categoryId" class="form-label">Expense Category <span class="required">*</span></label>
-            <select
-              id="categoryId"
-              formControlName="categoryId"
-              class="form-select"
-              [class.is-invalid]="isFieldInvalid('categoryId')"
-            >
-              <option value="">Select an expense category</option>
-              <option *ngFor="let cat of expenseCategories" [value]="cat.id">
-                {{ cat.name }}
-              </option>
-            </select>
-            <div *ngIf="isFieldInvalid('categoryId')" class="form-error">
-              <span>Please select an expense category.</span>
-            </div>
-          </div>
-
-          <!-- Budget Amount -->
-          <div class="form-group mb-3">
-            <label for="amount" class="form-label">Planned Allowance (₹) <span class="required">*</span></label>
-            <div class="input-prefix-wrapper">
-              <span class="input-prefix">₹</span>
-              <input
-                type="number"
-                id="amount"
-                formControlName="amount"
-                inputmode="decimal"
-                step="0.01"
-                min="0.01"
-                class="form-control form-control-prefixed tabular-nums"
-                placeholder="0.00"
-                [class.is-invalid]="isFieldInvalid('amount')"
-              />
-            </div>
-            <div *ngIf="isFieldInvalid('amount')" class="form-error">
-              <span *ngIf="budgetForm.get('amount')?.errors?.['required']">Budget amount is required.</span>
-              <span *ngIf="budgetForm.get('amount')?.errors?.['min']">Amount must be greater than 0.</span>
-              <span *ngIf="budgetForm.get('amount')?.errors?.['max']">Amount cannot exceed ₹100,000,000.</span>
-            </div>
-          </div>
-
-          <div class="form-row mb-4">
-            <!-- Month -->
-            <div class="form-group mb-0">
-              <label for="month" class="form-label">Month <span class="required">*</span></label>
-              <select
-                id="month"
-                formControlName="month"
-                class="form-select"
-                [class.is-invalid]="isFieldInvalid('month')"
-              >
-                <option *ngFor="let m of months" [ngValue]="m.value">
-                  {{ m.name }}
-                </option>
-              </select>
-            </div>
-
-            <!-- Year -->
-            <div class="form-group mb-0">
-              <label for="year" class="form-label">Year <span class="required">*</span></label>
-              <input
-                type="number"
-                id="year"
-                formControlName="year"
-                class="form-control tabular-nums"
-                placeholder="2026"
-                [class.is-invalid]="isFieldInvalid('year')"
-              />
-              <div *ngIf="isFieldInvalid('year')" class="form-error">
-                <span>Year must be between 2000 and 2100.</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-actions d-flex gap-2">
-            <button type="submit" class="btn btn-primary" [disabled]="saving">
-              <span *ngIf="!saving">{{ editingBudgetId ? 'Update Budget' : 'Save Budget' }}</span>
-              <span *ngIf="saving">Saving...</span>
-            </button>
-            <button type="button" class="btn btn-secondary" *ngIf="editingBudgetId" (click)="cancelEdit()">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
+  <!-- Overall Budget Health Summary Hero Card -->
+  <div class="panel hero mb-4" *ngIf="!loading && budgets.length > 0">
+    <div class="d-flex justify-content-between align-items-center mb-1">
+      <span class="sub fw-medium">Total Monthly Budget Utilization</span>
+      <span class="pill" [class.g]="getTotalProgress() < 80" [class.w]="getTotalProgress() >= 80 && getTotalProgress() <= 100" [class.r]="getTotalProgress() > 100">
+        {{ getTotalProgress() }}% used
+      </span>
     </div>
 
-    <!-- Active Budgets List -->
-    <div class="card list-card">
-      <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="amt n mb-2">
+      ₹{{ getTotalSpent() | number:'1.0-0' }} <span class="dec fs-6 font-normal text-muted">/ ₹{{ getTotalPlanned() | number:'1.0-0' }} limit</span>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="bar mb-3">
+      <i
+        [class.ok]="getTotalProgress() < 80"
+        [class.wn]="getTotalProgress() >= 80 && getTotalProgress() <= 100"
+        [class.ov]="getTotalProgress() > 100"
+        [style.width.%]="getTotalProgress() > 100 ? 100 : getTotalProgress()"
+      ></i>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="tot m-0">
+      <div>
+        <small>Total Allowance</small>
+        <b class="n">₹{{ getTotalPlanned() | number:'1.0-0' }}</b>
+      </div>
+      <div>
+        <small>Total Spent</small>
+        <b class="n neg">₹{{ getTotalSpent() | number:'1.0-0' }}</b>
+      </div>
+      <div>
+        <small>Remaining</small>
+        <b class="n" [class.pos]="getTotalRemaining() >= 0" [class.neg]="getTotalRemaining() < 0">
+          ₹{{ getTotalRemaining() | number:'1.0-0' }}
+        </b>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="empty-state text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="text-secondary mt-3">Loading budgets...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && budgets.length === 0" class="panel text-center py-5">
+    <svg class="ic" style="width:40px;height:40px;opacity:0.4;margin-bottom:12px;"><use href="#i-pie"></use></svg>
+    <h3 class="h6 fw-bold mb-1">No monthly budgets set</h3>
+    <p class="text-muted small mb-3">Set monthly spending allowances for food, bills, shopping and more.</p>
+    <button type="button" class="btn btn-primary btn-sm" (click)="cancelEdit(); sheetBudgetOpen = true">
+      <svg class="ic s"><use href="#i-plus"></use></svg> Set First Budget
+    </button>
+  </div>
+
+  <!-- Active Budgets Grid/Cards -->
+  <div *ngIf="!loading && budgets.length > 0" class="d-flex flex-column gap-3 mb-4">
+    <div *ngFor="let b of budgets" class="panel">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="d-flex align-items-center gap-3">
+          <div class="av pr">
+            <svg class="ic"><use [attr.href]="'#i-' + getCategoryIcon(b.categoryName)"></use></svg>
+          </div>
+          <div>
+            <h3 class="fs-6 fw-bold mb-0 text-slate-900">{{ b.categoryName }}</h3>
+            <span class="sub">{{ getMonthName(b.month) }} {{ b.year }}</span>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-1">
+          <button type="button" class="btn btn-sm btn-secondary p-1" (click)="onEdit(b); sheetBudgetOpen = true" title="Edit Budget">
+            <svg class="ic s"><use href="#i-brief"></use></svg>
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary p-1 text-danger" (click)="onDelete(b.id)" title="Delete Budget">
+            <svg class="ic s"><use href="#i-trash"></use></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Amount breakdown -->
+      <div class="d-flex justify-content-between align-items-baseline mt-3 mb-1">
         <div>
-          <h2 class="card-title mb-0">Active Budgets</h2>
-          <p class="card-subtitle text-secondary small mb-0">Comparison of planned allowance versus actual expenditures</p>
+          <span class="n fw-bold fs-6">₹{{ b.spentAmount | number:'1.2-2' }}</span>
+          <span class="sub"> of ₹{{ b.amount | number:'1.2-2' }}</span>
         </div>
-        <span class="badge badge-secondary" *ngIf="!loading">{{ budgets.length }} budgets</span>
+        <div>
+          <span class="pill" [class.g]="b.progressPercentage < 80" [class.w]="b.progressPercentage >= 80 && b.progressPercentage < 100" [class.r]="b.progressPercentage >= 100">
+            <span *ngIf="b.progressPercentage < 100">{{ b.remainingAmount >= 0 ? 'Remaining ₹' + (b.remainingAmount | number:'1.0-0') : '' }} ({{ b.progressPercentage | number:'1.0-0' }}%)</span>
+            <span *ngIf="b.progressPercentage >= 100">Over by ₹{{ (b.spentAmount - b.amount) | number:'1.0-0' }}</span>
+          </span>
+        </div>
       </div>
 
-      <div class="card-body">
-        <div *ngIf="loading" class="empty-state py-4 text-center">
-          <div class="spinner"></div>
-          <p class="text-secondary small mt-3">Loading budgets...</p>
+      <!-- Visual Progress Bar -->
+      <div class="bar">
+        <i
+          [class.ok]="b.progressPercentage < 80"
+          [class.wn]="b.progressPercentage >= 80 && b.progressPercentage < 100"
+          [class.ov]="b.progressPercentage >= 100"
+          [style.width.%]="b.progressPercentage > 100 ? 100 : b.progressPercentage"
+        ></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- SLIDE-UP BOTTOM SHEET: SET / EDIT BUDGET       -->
+  <!-- ============================================== -->
+  <div class="scrim" *ngIf="sheetBudgetOpen" (click)="sheetBudgetOpen = false"></div>
+  <div class="sheet" *ngIf="sheetBudgetOpen" role="dialog" aria-label="Set category budget">
+    <div class="grip"></div>
+    <div class="sh">
+      <h3>{{ editingBudgetId ? 'Edit Budget Limit' : 'Set Category Budget' }}</h3>
+      <button type="button" class="ib" (click)="sheetBudgetOpen = false" aria-label="Close modal">
+        <svg class="ic"><use href="#i-x"></use></svg>
+      </button>
+    </div>
+
+    <form [formGroup]="budgetForm" (ngSubmit)="onSubmit()" novalidate>
+      <div class="sb">
+        <!-- Expense Category -->
+        <label for="categoryId" class="lb">Expense Category <span class="text-danger">*</span></label>
+        <select
+          id="categoryId"
+          formControlName="categoryId"
+          class="inp mb-3"
+          [class.bad]="isFieldInvalid('categoryId')"
+        >
+          <option value="">Select an expense category</option>
+          <option *ngFor="let cat of expenseCategories" [value]="cat.id">
+            {{ cat.name }}
+          </option>
+        </select>
+        <div *ngIf="isFieldInvalid('categoryId')" class="err mb-3">Please select an expense category.</div>
+
+        <!-- Budget Amount -->
+        <label for="amount" class="lb">Monthly Allowance (₹) <span class="text-danger">*</span></label>
+        <div class="amtin mb-3" [class.bad]="isFieldInvalid('amount')">
+          <span>₹</span>
+          <input
+            type="number"
+            id="amount"
+            formControlName="amount"
+            inputmode="decimal"
+            step="0.01"
+            min="0.01"
+            placeholder="0.00"
+          />
+        </div>
+        <div *ngIf="isFieldInvalid('amount')" class="err mb-3">
+          <span *ngIf="budgetForm.get('amount')?.errors?.['required']">Budget amount is required.</span>
+          <span *ngIf="budgetForm.get('amount')?.errors?.['min']">Amount must be greater than 0.</span>
         </div>
 
-        <div *ngIf="!loading && budgets.length === 0" class="empty-state py-4 text-center">
-          <p class="text-secondary small mb-2">No category budgets created yet.</p>
-          <p class="text-muted small">Set monthly spending limits using the form on the left.</p>
-        </div>
-
-        <div *ngIf="!loading && budgets.length > 0" class="budget-items-list">
-          <div *ngFor="let b of budgets" class="budget-item-card mb-3 p-3">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <div>
-                <h3 class="fs-md fw-semibold text-slate-900 mb-0">{{ b.categoryName }}</h3>
-                <span class="text-secondary small">{{ getMonthName(b.month) }} {{ b.year }}</span>
-              </div>
-              <div class="d-flex gap-1">
-                <button type="button" class="btn btn-secondary btn-sm py-1 px-2" (click)="onEdit(b)">Edit</button>
-                <button type="button" class="btn btn-danger btn-sm py-1 px-2" (click)="onDelete(b.id)">Delete</button>
-              </div>
-            </div>
-
-            <!-- 3 Stat Metrics -->
-            <div class="budget-stats-grid my-2">
-              <div class="stat-col">
-                <span class="stat-label">Planned Budget</span>
-                <span class="stat-val tabular-nums text-slate-900">₹{{ b.amount | number:'1.2-2' }}</span>
-              </div>
-              <div class="stat-col">
-                <span class="stat-label">Actual Spent</span>
-                <span class="stat-val text-expense tabular-nums">₹{{ b.spentAmount | number:'1.2-2' }}</span>
-              </div>
-              <div class="stat-col">
-                <span class="stat-label">Remaining Allowance</span>
-                <span class="stat-val tabular-nums" [ngClass]="b.remainingAmount >= 0 ? 'text-income' : 'text-expense'">
-                  ₹{{ b.remainingAmount | number:'1.2-2' }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Progress Bar -->
-            <div class="progress mt-2" style="height: 6px;">
-              <div
-                class="progress-bar"
-                [style.width.%]="b.progressPercentage > 100 ? 100 : b.progressPercentage"
-                [ngClass]="{
-                  'bg-success': b.progressPercentage < 80,
-                  'bg-warning': b.progressPercentage >= 80 && b.progressPercentage < 100,
-                  'bg-danger': b.progressPercentage >= 100
-                }"
-                role="progressbar"
-                [attr.aria-valuenow]="b.progressPercentage"
-                aria-valuemin="0"
-                aria-valuemax="100"
-              ></div>
-            </div>
-            <div class="d-flex justify-content-between small text-secondary mt-1">
-              <span>{{ b.progressPercentage | number:'1.1-1' }}% used</span>
-              <span *ngIf="b.progressPercentage >= 100" class="text-danger fw-semibold">Over Budget!</span>
-            </div>
+        <div class="row g-2 mb-3">
+          <!-- Month -->
+          <div class="col-6">
+            <label for="month" class="lb">Month <span class="text-danger">*</span></label>
+            <select id="month" formControlName="month" class="inp">
+              <option *ngFor="let m of months" [ngValue]="m.value">{{ m.name }}</option>
+            </select>
+          </div>
+          <!-- Year -->
+          <div class="col-6">
+            <label for="year" class="lb">Year <span class="text-danger">*</span></label>
+            <input type="number" id="year" formControlName="year" class="inp" placeholder="2026" />
           </div>
         </div>
       </div>
-    </div>
+
+      <div class="sf2">
+        <button type="button" class="btn sec2" (click)="cancelEdit(); sheetBudgetOpen = false">Cancel</button>
+        <button type="submit" class="btn" [disabled]="saving">
+          <span *ngIf="!saving">{{ editingBudgetId ? 'Update Budget' : 'Save Budget' }}</span>
+          <span *ngIf="saving">Saving...</span>
+        </button>
+      </div>
+    </form>
   </div>
 </div>

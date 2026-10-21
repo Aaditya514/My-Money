@@ -92,3 +92,5 @@ yarn-error.log*
 pnpm-debug.log*
 scratch/
 **/scratch/
+backend/data/
+**/data/*.mv.db

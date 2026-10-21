@@ -20,6 +20,7 @@ export class BudgetListComponent implements OnInit {
   expenseCategories: Category[] = [];
   budgetForm: FormGroup;
   editingBudgetId: number | null = null;
+  sheetBudgetOpen: boolean = false;
 
   months = [
     { value: 1, name: 'January' },
@@ -204,5 +205,38 @@ export class BudgetListComponent implements OnInit {
   getMonthName(monthNum: number): string {
     const m = this.months.find((item) => item.value === monthNum);
     return m ? m.name : String(monthNum);
+  }
+
+  getTotalPlanned(): number {
+    return this.budgets.reduce((acc, b) => acc + (b.amount || 0), 0);
+  }
+
+  getTotalSpent(): number {
+    return this.budgets.reduce((acc, b) => acc + (b.spentAmount || 0), 0);
+  }
+
+  getTotalRemaining(): number {
+    return this.getTotalPlanned() - this.getTotalSpent();
+  }
+
+  getTotalProgress(): number {
+    const planned = this.getTotalPlanned();
+    if (planned <= 0) return 0;
+    return Math.round((this.getTotalSpent() / planned) * 100);
+  }
+
+  getCategoryIcon(catName: string | undefined): string {
+    const name = (catName || '').toLowerCase();
+    if (name.includes('food') || name.includes('dining') || name.includes('restaurant')) return 'utensils';
+    if (name.includes('groc') || name.includes('supermarket') || name.includes('market')) return 'cart';
+    if (name.includes('transport') || name.includes('fuel') || name.includes('cab') || name.includes('auto') || name.includes('travel')) return 'car';
+    if (name.includes('shop') || name.includes('cloth') || name.includes('mall') || name.includes('amazon')) return 'bag';
+    if (name.includes('util') || name.includes('bill') || name.includes('electric') || name.includes('recharge') || name.includes('wifi')) return 'zap';
+    if (name.includes('movie') || name.includes('entertain') || name.includes('netflix') || name.includes('game')) return 'film';
+    if (name.includes('health') || name.includes('med') || name.includes('doctor') || name.includes('fitness')) return 'heart';
+    if (name.includes('salary') || name.includes('income') || name.includes('job') || name.includes('bonus') || name.includes('freelance')) return 'brief';
+    if (name.includes('invest') || name.includes('stock') || name.includes('mutual') || name.includes('goal')) return 'target';
+    if (name.includes('subscript') || name.includes('recur') || name.includes('emi') || name.includes('rent')) return 'repeat';
+    return 'pie';
   }
 }

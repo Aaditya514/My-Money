@@ -1,493 +1,226 @@
 <div class="page-container animate-fade-in">
-  <!-- Desktop Header -->
-  <header class="page-header desktop-only">
-    <div class="page-header-content">
-      <div>
-        <h1 class="page-title">Financial Overview</h1>
-        <p class="page-subtitle">
-          Cash flow, budget utilization, and upcoming commitments for {{ months[selectedMonth - 1] }} {{ selectedYear }}.
-        </p>
-      </div>
-
-      <div class="page-actions">
-        <!-- Month Navigator -->
-        <div class="month-selector" aria-label="Month and year filter">
-          <button type="button" class="btn btn-secondary btn-sm nav-btn" (click)="prevMonth()" title="Previous Month" aria-label="Previous Month">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-          </button>
-          <select [(ngModel)]="selectedMonth" (change)="onMonthYearChange()" class="form-select month-select" aria-label="Select Month">
-            <option *ngFor="let m of months; let i = index" [ngValue]="i + 1">{{ m }}</option>
-          </select>
-          <select [(ngModel)]="selectedYear" (change)="onMonthYearChange()" class="form-select year-select" aria-label="Select Year">
-            <option *ngFor="let y of years" [ngValue]="y">{{ y }}</option>
-          </select>
-          <button type="button" class="btn btn-secondary btn-sm nav-btn" (click)="nextMonth()" title="Next Month" aria-label="Next Month">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
-        </div>
-
-        <a routerLink="/transactions/add" class="btn btn-primary btn-sm">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          Add Transaction
-        </a>
-        <a routerLink="/ai-scanner" class="btn btn-secondary btn-sm">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-            <polyline points="21 15 16 10 5 21"></polyline>
-          </svg>
-          Scan Receipt
-        </a>
-      </div>
-    </div>
-  </header>
-
-  <!-- Mobile Header with Compact Month Bar -->
-  <header class="mobile-only mb-3">
-    <div class="mobile-month-bar">
-      <button type="button" class="btn btn-secondary btn-sm nav-btn" (click)="prevMonth()" title="Previous Month" aria-label="Previous Month">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-      </button>
-      <div class="mobile-month-selects">
-        <select [(ngModel)]="selectedMonth" (change)="onMonthYearChange()" class="form-select month-select fw-semibold" aria-label="Select Month">
-          <option *ngFor="let m of months; let i = index" [ngValue]="i + 1">{{ m }}</option>
-        </select>
-        <select [(ngModel)]="selectedYear" (change)="onMonthYearChange()" class="form-select year-select" aria-label="Select Year">
-          <option *ngFor="let y of years" [ngValue]="y">{{ y }}</option>
-        </select>
-      </div>
-      <button type="button" class="btn btn-secondary btn-sm nav-btn" (click)="nextMonth()" title="Next Month" aria-label="Next Month">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-      </button>
-    </div>
-  </header>
-
   <!-- Alerts -->
-  <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
-    <span>{{ errorMessage }}</span>
-    <button type="button" class="alert-close" (click)="errorMessage = ''" aria-label="Dismiss alert">&times;</button>
+  <div *ngIf="errorMessage" class="banner r mb-3" role="alert">
+    <svg class="ic s" style="margin-top:2px"><use href="#i-alert"></use></svg>
+    <div class="banner-text">{{ errorMessage }}</div>
+    <button type="button" class="banner-close" (click)="errorMessage = ''" aria-label="Dismiss alert">&times;</button>
   </div>
-  <div *ngIf="successMessage" class="alert alert-success" role="alert">
-    <span>{{ successMessage }}</span>
-    <button type="button" class="alert-close" (click)="successMessage = ''" aria-label="Dismiss alert">&times;</button>
+  <div *ngIf="successMessage" class="banner i mb-3" role="alert">
+    <svg class="ic s" style="margin-top:2px"><use href="#i-check"></use></svg>
+    <div class="banner-text">{{ successMessage }}</div>
+    <button type="button" class="banner-close" (click)="successMessage = ''" aria-label="Dismiss alert">&times;</button>
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading" class="empty-state">
-    <div class="spinner"></div>
+  <div *ngIf="loading" class="empty-state text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
     <p class="text-secondary mt-3">Loading financial records...</p>
   </div>
 
   <div *ngIf="!loading && dashboardData">
-    <!-- Desktop 3-Metric Cash Flow Status Strip -->
-    <section class="kpi-strip desktop-only mb-4" aria-label="Monthly Cash Flow Summary">
-      <div class="kpi-card">
-        <div class="kpi-label">Period Inflow</div>
-        <div class="kpi-value text-income tabular-nums">
-          +₹{{ (dashboardData.totalIncome || 0) | number:'1.2-2' }}
-        </div>
-        <div class="kpi-caption">
-          Income recorded in {{ months[selectedMonth - 1] }}
-        </div>
-        <a routerLink="/transactions" class="kpi-link">View inflow ledger &rarr;</a>
+    <!-- Top Month Navigator Bar -->
+    <div class="d-flex align-items-center justify-content-between p-2 mb-3 bg-surface border rounded-3 shadow-xs">
+      <button type="button" class="btn btn-sm btn-secondary p-2" (click)="prevMonth()" title="Previous Month" aria-label="Previous Month">
+        <svg class="ic s"><use href="#i-chevl"></use></svg>
+      </button>
+      <div class="d-flex align-items-center gap-2">
+        <span class="fw-bold fs-6 n">{{ months[selectedMonth - 1] }} {{ selectedYear }}</span>
+      </div>
+      <button type="button" class="btn btn-sm btn-secondary p-2" (click)="nextMonth()" title="Next Month" aria-label="Next Month">
+        <svg class="ic s"><use href="#i-chevr"></use></svg>
+      </button>
+    </div>
+
+    <!-- Prototype Net Balance Hero Card -->
+    <div class="panel hero mb-3">
+      <div class="sub">Net cashflow · {{ months[selectedMonth - 1] }} {{ selectedYear }}</div>
+      <div class="amt n" [class.pos]="(dashboardData.balance || 0) >= 0" [class.neg]="(dashboardData.balance || 0) < 0">
+        {{ (dashboardData.balance || 0) >= 0 ? '+' : '-' }}₹{{ getIntPart(dashboardData.balance) }}<span class="dec">{{ getDecPart(dashboardData.balance) }}</span>
       </div>
 
-      <div class="kpi-card">
-        <div class="kpi-label">Period Outflow</div>
-        <div class="kpi-value text-expense tabular-nums">
-          -₹{{ (dashboardData.totalExpenses || 0) | number:'1.2-2' }}
-        </div>
-        <div class="kpi-caption">
-          Expenses recorded in {{ months[selectedMonth - 1] }}
-        </div>
-        <a routerLink="/transactions" class="kpi-link">View expense records &rarr;</a>
+      <!-- Inflow vs Outflow Proportional Split Bar -->
+      <div class="split" aria-label="Inflow vs Outflow Ratio">
+        <i class="ok" [style.width.%]="getInflowRatio()" title="Inflow: {{ getInflowRatio() }}%"></i>
+        <i class="ov" [style.width.%]="getOutflowRatio()" title="Outflow: {{ getOutflowRatio() }}%"></i>
       </div>
 
-      <div class="kpi-card">
-        <div class="kpi-label">Net Cash Flow</div>
-        <div class="kpi-value tabular-nums" [ngClass]="(dashboardData.balance || 0) >= 0 ? 'text-income' : 'text-expense'">
-          {{ (dashboardData.balance || 0) >= 0 ? '+' : '' }}₹{{ (dashboardData.balance || 0) | number:'1.2-2' }}
+      <!-- Inflow and Outflow 2-Column Summary -->
+      <div class="io">
+        <div>
+          <small>Period Inflow</small>
+          <b class="n pos">+₹{{ (dashboardData.totalIncome || 0) | number:'1.2-2' }}</b>
         </div>
-        <div class="kpi-caption">
-          {{ (dashboardData.balance || 0) >= 0 ? 'Net period surplus' : 'Net period deficit' }}
-        </div>
-        <span class="kpi-subtle-badge" [ngClass]="(dashboardData.balance || 0) >= 0 ? 'badge-income' : 'badge-expense'">
-          {{ (dashboardData.balance || 0) >= 0 ? 'Positive balance' : 'Action required' }}
-        </span>
-      </div>
-    </section>
-
-    <!-- Mobile Hero Cash Flow Card (Unified) -->
-    <section class="mobile-only mobile-hero-card mb-4" aria-label="Mobile Cash Flow Summary">
-      <div class="mobile-hero-header">
-        <span class="mobile-hero-label">Net Cash Flow &bull; {{ months[selectedMonth - 1] }}</span>
-        <span class="badge" [ngClass]="(dashboardData.balance || 0) >= 0 ? 'badge-income' : 'badge-expense'">
-          {{ (dashboardData.balance || 0) >= 0 ? 'Surplus' : 'Deficit' }}
-        </span>
-      </div>
-      <div class="mobile-hero-amount tabular-nums" [ngClass]="(dashboardData.balance || 0) >= 0 ? 'text-income' : 'text-expense'">
-        {{ (dashboardData.balance || 0) >= 0 ? '+' : '' }}₹{{ (dashboardData.balance || 0) | number:'1.2-2' }}
-      </div>
-      <div class="mobile-hero-stats">
-        <div class="mobile-hero-stat">
-          <span class="mobile-hero-stat-label">Inflow</span>
-          <span class="mobile-hero-stat-val text-income tabular-nums">+₹{{ (dashboardData.totalIncome || 0) | number:'1.0-0' }}</span>
-        </div>
-        <div class="mobile-hero-stat-divider"></div>
-        <div class="mobile-hero-stat">
-          <span class="mobile-hero-stat-label">Outflow</span>
-          <span class="mobile-hero-stat-val text-expense tabular-nums">-₹{{ (dashboardData.totalExpenses || 0) | number:'1.0-0' }}</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- 2. Dual Planning Grid: Salary Plan Allocation & Safety Net/Goals -->
-    <div class="dashboard-columns mb-4">
-      <!-- Column 1: Monthly Salary Plan Distribution -->
-      <div class="card" *ngIf="dashboardData.salaryPlan">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h2 class="card-title">Salary Plan &mdash; {{ months[selectedMonth - 1] }}</h2>
-          <a routerLink="/salary-plan" class="btn btn-secondary btn-sm">Full Plan</a>
-        </div>
-        <div class="card-body">
-          <div class="metric-highlight mb-3">
-            <span class="text-secondary small">Expected Net Take-Home</span>
-            <span class="fs-lg fw-bold tabular-nums text-slate-900">
-              ₹{{ dashboardData.salaryPlan.takeHomeSalary | number:'1.2-2' }}
-            </span>
-          </div>
-
-          <!-- Planned vs Actual Expenses -->
-          <div class="progress-group mb-3">
-            <div class="d-flex justify-content-between small mb-1">
-              <span class="text-secondary">Expenses: ₹{{ dashboardData.salaryPlan.actualExpenses | number:'1.0-0' }} spent</span>
-              <span class="text-secondary">Planned: ₹{{ dashboardData.salaryPlan.plannedExpenses | number:'1.0-0' }}</span>
-            </div>
-            <div class="progress">
-              <div
-                class="progress-bar"
-                [style.width.%]="getSalaryExpensePercentage()"
-                [ngClass]="getSalaryExpensePercentage() > 90 ? 'bg-danger' : 'bg-primary'"
-                role="progressbar"
-                [attr.aria-valuenow]="getSalaryExpensePercentage()"
-                aria-valuemin="0"
-                aria-valuemax="100">
-              </div>
-            </div>
-            <div class="d-flex justify-content-between text-muted small mt-1">
-              <span>{{ getSalaryExpensePercentage() }}% of take-home</span>
-              <span *ngIf="dashboardData.salaryPlan.actualExpenses > dashboardData.salaryPlan.plannedExpenses" class="text-danger fw-semibold">
-                Exceeded plan
-              </span>
-            </div>
-          </div>
-
-          <!-- Emergency Fund Contribution -->
-          <div class="progress-group mb-3">
-            <div class="d-flex justify-content-between small mb-1">
-              <span class="text-secondary">Emergency Allocation</span>
-              <span class="text-secondary">Contributed: ₹{{ dashboardData.salaryPlan.actualEmergencyFund | number:'1.0-0' }}</span>
-            </div>
-            <div class="progress">
-              <div class="progress-bar bg-success" style="width: 100%;" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-          </div>
-
-          <!-- Calculated Safety Buffer -->
-          <div class="buffer-indicator">
-            <div class="buffer-label">Planned Safety Buffer</div>
-            <div class="buffer-val tabular-nums text-income fw-bold">
-              ₹{{ dashboardData.salaryPlan.calculatedBuffer | number:'1.2-2' }}
-            </div>
-            <div class="text-muted small">Take-Home &minus; (Planned Expenses + Savings)</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Column 2: Emergency Fund & Savings Goals -->
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h2 class="card-title">Savings Goals &amp; Safety Net</h2>
-          <a routerLink="/savings-goals" class="btn btn-secondary btn-sm">Manage Goals</a>
-        </div>
-        <div class="card-body">
-          <!-- Emergency Fund Gauge -->
-          <div class="goal-item mb-3" *ngIf="dashboardData.emergencyFundGoal">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <span class="fw-semibold text-slate-800">{{ dashboardData.emergencyFundGoal.name }}</span>
-              <span class="badge badge-income tabular-nums">{{ dashboardData.emergencyFundGoal.progressPercentage }}%</span>
-            </div>
-            <div class="progress">
-              <div class="progress-bar bg-success" [style.width.%]="dashboardData.emergencyFundGoal.progressPercentage" role="progressbar"></div>
-            </div>
-            <div class="d-flex justify-content-between small text-secondary mt-1 tabular-nums">
-              <span>Saved: ₹{{ dashboardData.emergencyFundGoal.currentAmount | number:'1.0-0' }}</span>
-              <span>Target: ₹{{ dashboardData.emergencyFundGoal.targetAmount | number:'1.0-0' }}</span>
-            </div>
-          </div>
-
-          <!-- Total Goals Summary -->
-          <div class="goal-summary-card">
-            <div class="d-flex justify-content-between align-items-baseline mb-1">
-              <span class="text-secondary small">Total Accumulated in Goals</span>
-              <span class="badge badge-info">{{ dashboardData.totalGoalsCount }} active goals</span>
-            </div>
-            <div class="fs-xl fw-bold text-slate-900 tabular-nums mb-2">
-              ₹{{ (dashboardData.totalGoalsSaved || 0) | number:'1.2-2' }}
-            </div>
-            <div class="progress mb-2">
-              <div class="progress-bar bg-primary" [style.width.%]="dashboardData.overallGoalsProgress" role="progressbar"></div>
-            </div>
-            <div class="d-flex justify-content-between small text-secondary tabular-nums">
-              <span>Overall Target: ₹{{ (dashboardData.totalGoalsTarget || 0) | number:'1.0-0' }}</span>
-              <span>{{ dashboardData.overallGoalsProgress }}% completed</span>
-            </div>
-          </div>
+        <div>
+          <small>Period Outflow</small>
+          <b class="n neg">-₹{{ (dashboardData.totalExpenses || 0) | number:'1.2-2' }}</b>
         </div>
       </div>
     </div>
 
-    <!-- 3. Financial Visualizations -->
-    <div class="dashboard-charts-grid mb-4">
-      <!-- Cash Flow Dynamics Bar Chart -->
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h2 class="card-title">Cash Flow Dynamics &mdash; {{ months[selectedMonth - 1] }}</h2>
-          <span class="badge badge-secondary">Inflow vs Outflow</span>
-        </div>
-        <div class="card-body">
-          <div class="chart-container" style="position: relative; height: 260px;">
-            <canvas #cashFlowBarCanvas></canvas>
-          </div>
-        </div>
+    <!-- Segmented Control: Overview vs Activity -->
+    <div class="seg mb-3">
+      <button type="button" [class.on]="activeSegment === 'ov'" (click)="activeSegment = 'ov'">Overview</button>
+      <button type="button" [class.on]="activeSegment === 'act'" (click)="activeSegment = 'act'">Activity</button>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TAB 1: OVERVIEW                                -->
+    <!-- ============================================== -->
+    <div *ngIf="activeSegment === 'ov'" class="animate-fade-in">
+      <!-- Quick Action Buttons -->
+      <div class="d-flex gap-2 mb-4">
+        <a routerLink="/transactions/add" class="btn btn-primary flex-fill py-2 text-decoration-none">
+          <svg class="ic s"><use href="#i-plus"></use></svg>
+          Add Transaction
+        </a>
+        <a routerLink="/ai-scanner" class="btn btn-secondary flex-fill py-2 text-decoration-none">
+          <svg class="ic s"><use href="#i-scan"></use></svg>
+          Scan Bill
+        </a>
       </div>
 
-      <!-- Category Spending Doughnut Chart -->
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h2 class="card-title">Expense Breakdown by Category</h2>
-          <a routerLink="/categories" class="small text-primary">Categories &rarr;</a>
-        </div>
-        <div class="card-body">
-          <div *ngIf="dashboardData.categoryExpenses.length === 0" class="empty-state py-4">
-            <p class="text-secondary small mb-2">No expenses recorded in {{ months[selectedMonth - 1] }} {{ selectedYear }}.</p>
-            <a routerLink="/transactions/add" class="btn btn-secondary btn-sm">Add Expense</a>
+      <!-- Cash Flow & Category Visualizations -->
+      <div class="row g-3 mb-4">
+        <!-- Cash Flow Bar Chart -->
+        <div class="col-12 col-lg-7">
+          <div class="panel h-100">
+            <div class="st">
+              <h2>Cash Flow Comparison</h2>
+              <span class="pill b">Monthly</span>
+            </div>
+            <div style="position: relative; height: 220px;">
+              <canvas #cashFlowBarCanvas></canvas>
+            </div>
+            <div class="leg">
+              <span><i style="background: #059669"></i> Inflow</span>
+              <span><i style="background: #dc2626"></i> Outflow</span>
+            </div>
           </div>
+        </div>
 
-          <div *ngIf="dashboardData.categoryExpenses.length > 0">
-            <div class="chart-container mb-3" style="position: relative; height: 190px;">
+        <!-- Category Doughnut Breakdown -->
+        <div class="col-12 col-lg-5">
+          <div class="panel h-100">
+            <div class="st">
+              <h2>Top Spending Categories</h2>
+              <a routerLink="/categories" class="lnk">Manage &rarr;</a>
+            </div>
+            <div *ngIf="(dashboardData.categoryExpenses || []).length === 0" class="empty py-4 text-center text-muted">
+              <svg class="ic" style="width:36px;height:36px;opacity:0.4;margin-bottom:8px;"><use href="#i-pie"></use></svg>
+              <div>No expenses recorded this month</div>
+            </div>
+            <div *ngIf="(dashboardData.categoryExpenses || []).length > 0" style="position: relative; height: 180px;">
               <canvas #categoryDoughnutCanvas></canvas>
             </div>
-            <div class="category-breakdown-list">
-              <div *ngFor="let cat of dashboardData.categoryExpenses" class="category-row">
-                <div class="d-flex justify-content-between small mb-1">
-                  <span class="fw-medium text-slate-800">{{ cat.categoryName }}</span>
-                  <span class="tabular-nums text-slate-900">
-                    ₹{{ cat.amount | number:'1.2-2' }}
-                    <span class="text-muted small">({{ cat.percentage | number:'1.1-1' }}%)</span>
-                  </span>
+            <!-- Category Chips -->
+            <div class="d-flex flex-wrap gap-1 mt-3" *ngIf="(dashboardData.categoryExpenses || []).length > 0">
+              <span *ngFor="let cat of (dashboardData.categoryExpenses || []).slice(0, 4)" class="pill n0">
+                {{ cat.categoryName }}: ₹{{ cat.amount | number:'1.0-0' }} ({{ cat.percentage }}%)
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Budget Health Meters -->
+      <div class="panel mb-4" *ngIf="dashboardData.categoryExpenses && dashboardData.categoryExpenses.length > 0">
+        <div class="st">
+          <h2>Budget Health &amp; Category Limits</h2>
+          <a routerLink="/budgets" class="lnk">All Budgets &rarr;</a>
+        </div>
+        <div class="d-flex flex-column gap-3 mt-2">
+          <div *ngFor="let cat of (dashboardData.categoryExpenses || []).slice(0, 4)">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <div class="d-flex align-items-center gap-2">
+                <div class="av" style="width:28px;height:28px;border-radius:8px;">
+                  <svg class="ic s"><use [attr.href]="'#i-' + getCategoryIcon(cat.categoryName)"></use></svg>
                 </div>
-                <div class="progress" style="height: 4px;">
-                  <div class="progress-bar bg-primary" [style.width.%]="cat.percentage"></div>
-                </div>
+                <span class="fw-semibold fs-6">{{ cat.categoryName }}</span>
               </div>
+              <div class="d-flex align-items-center gap-2">
+                <span class="n fw-bold fs-6">₹{{ cat.amount | number:'1.2-2' }}</span>
+                <span class="pill" [class.g]="cat.percentage < 80" [class.w]="cat.percentage >= 80 && cat.percentage <= 100" [class.r]="cat.percentage > 100">
+                  {{ cat.percentage }}%
+                </span>
+              </div>
+            </div>
+            <div class="bar">
+              <i [class.ok]="cat.percentage < 80" [class.wn]="cat.percentage >= 80 && cat.percentage <= 100" [class.ov]="cat.percentage > 100" [style.width.%]="cat.percentage > 100 ? 100 : cat.percentage"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming Recurring Commitments -->
+      <div class="panel mb-4">
+        <div class="st">
+          <h2>Upcoming Bills &amp; Commitments</h2>
+          <a routerLink="/recurring" class="lnk">Manage ({{ upcomingBills.length }}) &rarr;</a>
+        </div>
+
+        <div *ngIf="upcomingBills.length === 0" class="empty py-3 text-center text-muted">
+          <svg class="ic" style="width:32px;height:32px;opacity:0.4;margin-bottom:8px;"><use href="#i-repeat"></use></svg>
+          <div>No pending bills due in the next 30 days</div>
+        </div>
+
+        <div *ngIf="upcomingBills.length > 0" class="d-flex flex-column">
+          <div *ngFor="let bill of upcomingBills.slice(0, 4)" class="d-flex align-items-center justify-content-between py-2 border-bottom">
+            <div class="d-flex align-items-center gap-3">
+              <div class="av wa">
+                <svg class="ic"><use href="#i-zap"></use></svg>
+              </div>
+              <div>
+                <b class="d-block">{{ bill.title }}</b>
+                <span class="sub">Due: {{ bill.nextDueDate | date:'mediumDate' }} · <span class="pill w">{{ bill.frequency }}</span></span>
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="n fw-bold text-danger fs-6">₹{{ bill.amount | number:'1.2-2' }}</span>
+              <button
+                type="button"
+                class="btn btn-sm btn-secondary"
+                (click)="onRecordBill(bill)"
+                [disabled]="recordingBillId === bill.id"
+              >
+                <span *ngIf="recordingBillId !== bill.id">Mark Paid</span>
+                <span *ngIf="recordingBillId === bill.id">...</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 4. Upcoming Repeating Commitments & Bills -->
-    <section class="card mb-4" *ngIf="upcomingBills && upcomingBills.length > 0" aria-label="Upcoming Repeating Payments">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <div>
-          <h2 class="card-title mb-0">Upcoming Repeating Commitments &amp; Bills</h2>
-          <p class="card-subtitle text-secondary small mb-0">Scheduled subscriptions, rent, and utility commitments due soon</p>
+    <!-- ============================================== -->
+    <!-- TAB 2: ACTIVITY                                -->
+    <!-- ============================================== -->
+    <div *ngIf="activeSegment === 'act'" class="animate-fade-in">
+      <div class="panel mb-4">
+        <div class="st">
+          <h2>Recent Activity</h2>
+          <a routerLink="/transactions" class="lnk">View All Ledger &rarr;</a>
         </div>
-        <a routerLink="/recurring" class="btn btn-secondary btn-sm">Manage All ({{ upcomingBills.length }})</a>
-      </div>
-      <!-- Desktop Table -->
-      <div class="table-container desktop-only">
-        <table class="table" aria-label="Upcoming Bills Table">
-          <thead>
-            <tr>
-              <th scope="col">Commitment</th>
-              <th scope="col">Category</th>
-              <th scope="col">Frequency</th>
-              <th scope="col">Status &amp; Due Date</th>
-              <th scope="col" class="text-end">Amount</th>
-              <th scope="col" class="text-end">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let bill of upcomingBills">
-              <td>
-                <div class="fw-semibold text-slate-900">{{ bill.title }}</div>
-                <div *ngIf="bill.notes" class="text-muted small">{{ bill.notes }}</div>
-              </td>
-              <td>
-                <span class="badge badge-secondary">{{ bill.categoryName || 'General' }}</span>
-              </td>
-              <td>
-                <span class="badge badge-info">{{ bill.frequency }}</span>
-              </td>
-              <td>
-                <span class="badge" [ngClass]="{
-                  'badge-danger': bill.overdue,
-                  'badge-warning': !bill.overdue && bill.daysUntilDue === 0,
-                  'badge-secondary': !bill.overdue && bill.daysUntilDue !== 0
-                }">
-                  {{ bill.overdue ? 'Overdue' : (bill.daysUntilDue === 0 ? 'Due Today' : (bill.daysUntilDue! <= 7 ? 'Due in ' + bill.daysUntilDue + 'd' : bill.nextDueDate)) }}
-                </span>
-              </td>
-              <td class="text-end tabular-nums fw-semibold" [ngClass]="bill.type === 'INCOME' ? 'text-income' : 'text-slate-900'">
-                {{ bill.type === 'INCOME' ? '+' : '' }}₹{{ bill.amount | number:'1.2-2' }}
-              </td>
-              <td class="text-end">
-                <button
-                  type="button"
-                  class="btn btn-primary btn-sm"
-                  (click)="onRecordBill(bill)"
-                  [disabled]="recordingBillId === bill.id"
-                  title="Record in transaction ledger and update next due date">
-                  <span *ngIf="recordingBillId === bill.id" class="spinner-border spinner-border-sm" role="status"></span>
-                  <span *ngIf="recordingBillId !== bill.id">Record Payment</span>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
 
-      <!-- Mobile Touch Bills List -->
-      <div class="mobile-only p-2">
-        <div class="card p-3 mb-2" *ngFor="let bill of upcomingBills" style="border: 1px solid var(--border-color);">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <div>
-              <div class="fw-semibold text-slate-900">{{ bill.title }}</div>
-              <div class="d-flex align-items-center gap-2 mt-1">
-                <span class="badge badge-category">{{ bill.categoryName || 'General' }}</span>
-                <span class="badge badge-frequency">{{ bill.frequency }}</span>
-              </div>
-            </div>
-            <div class="text-end">
-              <div class="fw-bold tabular-nums" [ngClass]="bill.type === 'INCOME' ? 'text-income' : 'text-slate-900'">
-                {{ bill.type === 'INCOME' ? '+' : '' }}₹{{ bill.amount | number:'1.2-2' }}
-              </div>
-              <span class="badge mt-1" [ngClass]="{
-                'badge-danger': bill.overdue,
-                'badge-warning': !bill.overdue && bill.daysUntilDue === 0,
-                'badge-secondary': !bill.overdue && bill.daysUntilDue !== 0
-              }">
-                {{ bill.overdue ? 'Overdue' : (bill.daysUntilDue === 0 ? 'Due Today' : (bill.daysUntilDue! <= 7 ? 'Due in ' + bill.daysUntilDue + 'd' : bill.nextDueDate)) }}
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            class="btn btn-primary btn-sm w-100 mt-2"
-            (click)="onRecordBill(bill)"
-            [disabled]="recordingBillId === bill.id">
-            <span *ngIf="recordingBillId === bill.id" class="spinner-border spinner-border-sm" role="status"></span>
-            <span *ngIf="recordingBillId !== bill.id">Record Payment Now</span>
-          </button>
+        <div *ngIf="(dashboardData.recentTransactions || []).length === 0" class="empty py-4 text-center text-muted">
+          <svg class="ic" style="width:36px;height:36px;opacity:0.4;margin-bottom:8px;"><use href="#i-list"></use></svg>
+          <div>No recent transactions found</div>
         </div>
-      </div>
-    </section>
 
-    <!-- 5. Recent Transaction Feed -->
-    <section class="card mb-4" aria-label="Recent Transactions">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <div>
-          <h2 class="card-title mb-0">Recent Activity</h2>
-          <p class="card-subtitle text-secondary small mb-0">Most recent financial entries across all categories</p>
-        </div>
-        <a routerLink="/transactions" class="btn btn-secondary btn-sm">Full Ledger &rarr;</a>
-      </div>
-
-      <div *ngIf="dashboardData.recentTransactions.length === 0" class="empty-state py-5 text-center">
-        <p class="text-secondary small mb-3">No recent transactions recorded.</p>
-        <a routerLink="/transactions/add" class="btn btn-primary btn-sm">Add First Transaction</a>
-      </div>
-
-      <!-- Desktop Recent Transactions Table -->
-      <div *ngIf="dashboardData.recentTransactions.length > 0" class="table-container desktop-only">
-        <table class="table" aria-label="Recent Transactions Table">
-          <thead>
-            <tr>
-              <th scope="col">Description</th>
-              <th scope="col">Category</th>
-              <th scope="col">Date</th>
-              <th scope="col">Type</th>
-              <th scope="col" class="text-end">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let t of dashboardData.recentTransactions">
-              <td>
-                <span class="fw-semibold text-slate-900">{{ t.title }}</span>
-              </td>
-              <td>
-                <span class="badge badge-secondary">{{ t.categoryName || 'General' }}</span>
-              </td>
-              <td class="text-secondary small tabular-nums">{{ t.transactionDate }}</td>
-              <td>
-                <span class="badge" [ngClass]="{
-                  'badge-income': t.type === 'INCOME',
-                  'badge-expense': t.type === 'EXPENSE',
-                  'badge-info': t.type === 'REFUND'
-                }">
-                  {{ t.type }}
-                </span>
-              </td>
-              <td class="text-end tabular-nums fw-semibold" [ngClass]="{
-                'text-income': t.type === 'INCOME' || t.type === 'REFUND',
-                'text-expense': t.type === 'EXPENSE'
-              }">
-                {{ (t.type === 'INCOME' || t.type === 'REFUND') ? '+' : '-' }}₹{{ t.amount | number:'1.2-2' }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Mobile Touch Recent Transactions -->
-      <div *ngIf="dashboardData.recentTransactions.length > 0" class="mobile-only mobile-tx-list p-2">
-        <div class="mobile-tx-item mb-2" *ngFor="let t of dashboardData.recentTransactions">
-          <div class="mobile-tx-avatar" [ngClass]="{
-            'income': t.type === 'INCOME',
-            'expense': t.type === 'EXPENSE',
-            'refund': t.type === 'REFUND'
-          }">
-            <svg *ngIf="t.type === 'INCOME'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
-            <svg *ngIf="t.type === 'EXPENSE'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="17" y1="7" x2="7" y2="17"></line><polyline points="17 17 7 17 7 7"></polyline></svg>
-            <svg *ngIf="t.type === 'REFUND'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-          </div>
-          <div class="mobile-tx-info">
-            <div class="mobile-tx-title">{{ t.title }}</div>
-            <div class="mobile-tx-meta">
-              <span class="badge badge-category">{{ t.categoryName || 'General' }}</span>
-              <span class="text-secondary">•</span>
-              <span class="tabular-nums">{{ t.transactionDate }}</span>
+        <div *ngIf="(dashboardData.recentTransactions || []).length > 0" class="d-flex flex-column">
+          <div *ngFor="let tx of dashboardData.recentTransactions" class="tx-item-proto" [routerLink]="['/transactions/edit', tx.id]">
+            <div class="av" [class.inc]="tx.type === 'INCOME'" [class.ref]="tx.type === 'EXPENSE'">
+              <svg class="ic"><use [attr.href]="'#i-' + getCategoryIcon(tx.categoryName)"></use></svg>
             </div>
-          </div>
-          <div class="mobile-tx-amount-col">
-            <div class="mobile-tx-amount tabular-nums" [ngClass]="{
-              'text-income': t.type === 'INCOME' || t.type === 'REFUND',
-              'text-expense': t.type === 'EXPENSE'
-            }">
-              {{ (t.type === 'INCOME' || t.type === 'REFUND') ? '+' : '-' }}₹{{ t.amount | number:'1.2-2' }}
+            <div class="m">
+              <b>{{ tx.title }}</b>
+              <span>{{ tx.categoryName || 'General' }} · {{ tx.transactionDate | date:'mediumDate' }}</span>
+            </div>
+            <div class="a n" [class.pos]="tx.type === 'INCOME'" [class.neg]="tx.type === 'EXPENSE'">
+              {{ tx.type === 'INCOME' ? '+' : '-' }}₹{{ tx.amount | number:'1.2-2' }}
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   </div>
 </div>
