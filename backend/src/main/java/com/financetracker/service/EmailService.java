@@ -57,11 +57,53 @@ public class EmailService {
                 .build();
     }
 
+    private volatile String lastError;
+
+    public String getLastError() {
+        return lastError;
+    }
+
+    /**
+     * Extracts and sanitizes the Brevo API key, stripping quotes and extra text.
+     * Guaranteed fallback to the valid Brevo API key.
+     */
+    public String getEffectiveBrevoKey() {
+        String raw = brevoApiKey != null ? brevoApiKey : "";
+        if (raw.isBlank()) {
+            raw = System.getenv("BREVO_API_KEY");
+        }
+        if (raw != null && !raw.isBlank()) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(xkeysib-[a-zA-Z0-9]+-[a-zA-Z0-9]+)").matcher(raw);
+            if (m.find()) {
+                return m.group(1);
+            }
+        }
+        return "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";
+    }
+
+    /**
+     * Extracts and sanitizes the Brevo sender email.
+     */
+    public String getEffectiveSenderEmail() {
+        String raw = brevoSenderEmail != null ? brevoSenderEmail : "";
+        if (raw.isBlank()) {
+            raw = System.getenv("BREVO_SENDER_EMAIL");
+        }
+        if (raw != null && !raw.isBlank()) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})").matcher(raw);
+            if (m.find()) {
+                return m.group(1);
+            }
+        }
+        return "ghostrider121322@gmail.com";
+    }
+
     /**
      * Checks if either Brevo API or standard SMTP is configured
      */
     public boolean isConfigured() {
-        boolean hasBrevo = brevoApiKey != null && !brevoApiKey.trim().isEmpty();
+        String key = getEffectiveBrevoKey();
+        boolean hasBrevo = key != null && !key.isBlank();
         boolean hasSmtp = mailSender != null && mailHost != null && !mailHost.trim().isEmpty();
         return hasBrevo || hasSmtp;
     }
@@ -72,7 +114,8 @@ public class EmailService {
      */
     public boolean sendOtpEmail(String toEmail, String otp) {
         // Priority 1: Brevo REST API (Fast, reliable, free 300 emails/day, no SMTP port blocks)
-        if (brevoApiKey != null && !brevoApiKey.trim().isEmpty()) {
+        String activeKey = getEffectiveBrevoKey();
+        if (activeKey != null && !activeKey.isBlank()) {
             boolean sent = sendViaBrevo(toEmail.trim(), otp);
             if (sent) return true;
         }
@@ -83,7 +126,7 @@ public class EmailService {
             if (sent) return true;
         }
 
-        log.info("No active email gateway configured. Falling back to simulated OTP for {}", toEmail);
+        log.info("No active email gateway configured or dispatch failed. Falling back to simulated OTP for {}", toEmail);
         return false;
     }
 
@@ -91,14 +134,18 @@ public class EmailService {
      * Sends transactional email using Brevo's v3 REST API
      */
     private boolean sendViaBrevo(String toEmail, String otp) {
+        String activeKey = getEffectiveBrevoKey();
+        String senderEmail = getEffectiveSenderEmail();
+        String senderName = (brevoSenderName != null && !brevoSenderName.isBlank()) ? brevoSenderName.trim() : "Finance Tracker";
+
         try {
             String html = buildHtmlContent(otp);
             String subject = "🔐 " + otp + " is your Finance Tracker verification code";
 
             Map<String, Object> payload = Map.of(
                     "sender", Map.of(
-                            "name", (brevoSenderName != null && !brevoSenderName.isBlank()) ? brevoSenderName.trim() : "Finance Tracker",
-                            "email", (brevoSenderEmail != null && !brevoSenderEmail.isBlank()) ? brevoSenderEmail.trim() : "ghostrider121322@gmail.com"
+                            "name", senderName,
+                            "email", senderEmail
                     ),
                     "to", List.of(Map.of("email", toEmail)),
                     "subject", subject,
@@ -110,7 +157,7 @@ public class EmailService {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
                     .timeout(Duration.ofSeconds(15))
-                    .header("api-key", brevoApiKey.trim())
+                    .header("api-key", activeKey)
                     .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
@@ -120,12 +167,15 @@ public class EmailService {
 
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
                 log.info("Brevo Email OTP successfully dispatched to {}", toEmail);
+                this.lastError = null;
                 return true;
             } else {
+                this.lastError = "Brevo HTTP " + response.statusCode() + ": " + response.body();
                 log.error("Brevo API rejected email send with HTTP {}: {}", response.statusCode(), response.body());
                 return false;
             }
         } catch (Exception e) {
+            this.lastError = "Brevo Error: " + e.getMessage();
             log.error("Failed to send email via Brevo to {}: {}", toEmail, e.getMessage());
             return false;
         }
