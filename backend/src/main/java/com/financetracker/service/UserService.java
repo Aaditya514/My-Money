@@ -60,8 +60,10 @@ public class UserService {
 
             if (sent) {
                 return new SendOtpResponse(true, "Verification code sent to " + email, phone, email, "EMAIL", null);
-            } else {
+            } else if (!emailService.isConfigured()) {
                 return new SendOtpResponse(true, "OTP generated for " + email, phone, email, "EMAIL", otp);
+            } else {
+                throw new RuntimeException("Could not send verification email to " + email + ". Please check your email address or try again.");
             }
         }
 
