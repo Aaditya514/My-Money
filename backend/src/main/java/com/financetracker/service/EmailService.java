@@ -131,12 +131,29 @@ public class EmailService {
     }
 
     /**
+     * Extracts and sanitizes the Brevo sender name, stripping quotes.
+     */
+    public String getEffectiveSenderName() {
+        String raw = brevoSenderName != null ? brevoSenderName : "";
+        if (raw.isBlank()) {
+            raw = System.getenv("BREVO_SENDER_NAME");
+        }
+        if (raw != null && !raw.isBlank()) {
+            raw = raw.replaceAll("^[\"']+|[\"']+$", "").trim();
+            if (!raw.isEmpty()) {
+                return raw;
+            }
+        }
+        return "Finance Tracker";
+    }
+
+    /**
      * Sends transactional email using Brevo's v3 REST API
      */
     private boolean sendViaBrevo(String toEmail, String otp) {
         String activeKey = getEffectiveBrevoKey();
         String senderEmail = getEffectiveSenderEmail();
-        String senderName = (brevoSenderName != null && !brevoSenderName.isBlank()) ? brevoSenderName.trim() : "Finance Tracker";
+        String senderName = getEffectiveSenderName();
 
         try {
             String html = buildHtmlContent(otp);

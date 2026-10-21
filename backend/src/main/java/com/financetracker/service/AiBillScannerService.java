@@ -68,13 +68,18 @@ public class AiBillScannerService {
     }
 
     public String getEffectiveApiKey(String requestKey) {
+        String key = null;
         if (requestKey != null && !requestKey.trim().isEmpty()) {
-            return requestKey.trim();
+            key = requestKey;
+        } else if (this.dynamicApiKey != null && !this.dynamicApiKey.trim().isEmpty()) {
+            key = this.dynamicApiKey;
+        } else {
+            key = this.apiKey;
         }
-        if (this.dynamicApiKey != null && !this.dynamicApiKey.trim().isEmpty()) {
-            return this.dynamicApiKey.trim();
+        if (key != null) {
+            key = key.replaceAll("^[\"']+|[\"']+$", "").trim();
         }
-        return this.apiKey;
+        return key;
     }
 
     public String getMaskedApiKey() {

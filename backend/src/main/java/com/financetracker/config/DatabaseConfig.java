@@ -52,6 +52,9 @@ public class DatabaseConfig {
         if (url == null || url.isEmpty()) {
             url = (rawUrl != null) ? rawUrl.trim() : "";
         }
+        if (url != null) {
+            url = url.replaceAll("^[\"']+|[\"']+$", "").trim();
+        }
         boolean isCloud = System.getenv("RENDER") != null || System.getenv("PORT") != null || System.getenv("RAILWAY_ENVIRONMENT") != null;
 
         // 1. Detect cloud PaaS DATABASE_URL format (postgres:// or postgresql://)
