@@ -12,12 +12,13 @@ public class RegisterRequest {
     @Pattern(regexp = "^[a-zA-Z\\s'-]+$", message = "Full name can only contain letters, spaces, hyphens, and apostrophes")
     private String name;
 
+    @NotBlank(message = "Phone number is required")
     @Pattern(regexp = "^[0-9]{10}$", message = "Phone number must be exactly 10 digits")
     private String phoneNumber;
 
-    @Pattern(regexp = "^[0-9]{6}$", message = "OTP must be 6 digits")
     private String otp;
 
+    @NotBlank(message = "Email address is required")
     @Email(message = "Please provide a valid email address (e.g. name@example.com)")
     @Size(max = 100, message = "Email address must not exceed 100 characters")
     private String email;

@@ -89,76 +89,67 @@ public class UserService {
     }
 
     /**
-     * Registers a new user with verified OTP (via email or phone), name, and password
+     * Registers a new user with required name, email, mandatory 10-digit mobile number, and password.
+     * Immediately generates an authenticated JWT session for automatic login.
      */
     public AuthResponse register(RegisterRequest request) {
-        String cleanPhone = null;
-        if (request.getPhoneNumber() != null && !request.getPhoneNumber().isBlank()) {
-            cleanPhone = otpService.normalizePhoneNumber(request.getPhoneNumber());
-            if (cleanPhone.length() != 10) {
-                throw new RuntimeException("Phone number must be exactly 10 digits.");
-            }
+        if (request.getName() == null || request.getName().trim().isBlank()) {
+            throw new RuntimeException("Full name is required.");
         }
 
-        // Assign clean email or fallback phone email for database integrity
-        String email = (request.getEmail() != null && !request.getEmail().isBlank())
-                ? request.getEmail().trim().toLowerCase()
-                : (cleanPhone != null ? cleanPhone + "@phone.user" : null);
-
-        if (email == null && cleanPhone == null) {
-            throw new RuntimeException("Either phone number or email is required.");
+        // Phone number is strictly mandatory for Splitwise matching & user identity
+        if (request.getPhoneNumber() == null || request.getPhoneNumber().trim().isBlank()) {
+            throw new RuntimeException("Mobile number is required for Splitwise group matching.");
+        }
+        String cleanPhone = otpService.normalizePhoneNumber(request.getPhoneNumber());
+        if (cleanPhone.length() != 10) {
+            throw new RuntimeException("Mobile number must be exactly 10 digits.");
         }
 
-        // Idempotency check 1: Check if user with this email already exists
-        if (email != null) {
-            Optional<User> existingEmailOpt = userRepository.findByEmail(email);
-            if (existingEmailOpt.isPresent()) {
-                User existing = existingEmailOpt.get();
-                // If registered recently (within 5 minutes) and password matches, return existing session
-                if (existing.getCreatedAt() != null &&
-                    existing.getCreatedAt().isAfter(java.time.LocalDateTime.now().minusMinutes(5)) &&
-                    passwordEncoder.matches(request.getPassword(), existing.getPassword())) {
-                    UserDto userDto = new UserDto(existing.getId(), existing.getName(), existing.getEmail(), existing.getPhoneNumber());
-                    String token = jwtService.generateToken(existing.getId(), existing.getEmail(), existing.getName());
-                    return new AuthResponse(true, "Registration successful!", userDto, token);
-                }
-                throw new RuntimeException("Email address is already registered. Please login or use a different email.");
-            }
+        // Email address is required
+        if (request.getEmail() == null || request.getEmail().trim().isBlank()) {
+            throw new RuntimeException("Email address is required.");
+        }
+        String email = request.getEmail().trim().toLowerCase();
+        if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+            throw new RuntimeException("Please provide a valid email address.");
         }
 
-        // Idempotency check 2: Check if user with this phone already exists
-        if (cleanPhone != null) {
-            Optional<User> existingPhoneOpt = userRepository.findByPhoneNumber(cleanPhone);
-            if (existingPhoneOpt.isPresent()) {
-                User existing = existingPhoneOpt.get();
-                if (existing.getCreatedAt() != null &&
-                    existing.getCreatedAt().isAfter(java.time.LocalDateTime.now().minusMinutes(5)) &&
-                    passwordEncoder.matches(request.getPassword(), existing.getPassword())) {
-                    UserDto userDto = new UserDto(existing.getId(), existing.getName(), existing.getEmail(), existing.getPhoneNumber());
-                    String token = jwtService.generateToken(existing.getId(), existing.getEmail(), existing.getName());
-                    return new AuthResponse(true, "Registration successful!", userDto, token);
-                }
-                throw new RuntimeException("Phone number is already registered. Please login instead.");
-            }
+        // Password validation
+        if (request.getPassword() == null || request.getPassword().length() < 6) {
+            throw new RuntimeException("Password must be at least 6 characters long.");
         }
 
-        // Verify OTP if OTP is provided/required
-        if (request.getOtp() != null && !request.getOtp().isBlank()) {
-            boolean isOtpValid = false;
-            // Check OTP for email first
-            if (email != null && !email.endsWith("@phone.user")) {
-                isOtpValid = otpService.verifyOtp(email, request.getOtp());
+        // Idempotency / Duplicate check 1: Email address
+        Optional<User> existingEmailOpt = userRepository.findByEmail(email);
+        if (existingEmailOpt.isPresent()) {
+            User existing = existingEmailOpt.get();
+            // If registered recently (within 5 minutes) with the same password, return existing session safely
+            if (existing.getCreatedAt() != null &&
+                existing.getCreatedAt().isAfter(java.time.LocalDateTime.now().minusMinutes(5)) &&
+                passwordEncoder.matches(request.getPassword(), existing.getPassword())) {
+                UserDto userDto = new UserDto(existing.getId(), existing.getName(), existing.getEmail(), existing.getPhoneNumber());
+                String token = jwtService.generateToken(existing.getId(), existing.getEmail(), existing.getName());
+                return new AuthResponse(true, "Registration successful!", userDto, token);
             }
-            // Fallback check OTP for phone
-            if (!isOtpValid && cleanPhone != null) {
-                isOtpValid = otpService.verifyOtp(cleanPhone, request.getOtp());
-            }
-
-            if (!isOtpValid) {
-                throw new RuntimeException("Invalid or expired OTP. Please re-check or request a new OTP.");
-            }
+            throw new RuntimeException("Email address is already registered. Please login instead.");
         }
 
+        // Idempotency / Duplicate check 2: Phone number
+        Optional<User> existingPhoneOpt = userRepository.findByPhoneNumber(cleanPhone);
+        if (existingPhoneOpt.isPresent()) {
+            User existing = existingPhoneOpt.get();
+            if (existing.getCreatedAt() != null &&
+                existing.getCreatedAt().isAfter(java.time.LocalDateTime.now().minusMinutes(5)) &&
+                passwordEncoder.matches(request.getPassword(), existing.getPassword())) {
+                UserDto userDto = new UserDto(existing.getId(), existing.getName(), existing.getEmail(), existing.getPhoneNumber());
+                String token = jwtService.generateToken(existing.getId(), existing.getEmail(), existing.getName());
+                return new AuthResponse(true, "Registration successful!", userDto, token);
+            }
+            throw new RuntimeException("Mobile number is already registered. Please login instead.");
+        }
+
+        // Create new user with hashed password and clean 10-digit phone number
         User user = new User();
         user.setName(request.getName().trim());
         user.setPhoneNumber(cleanPhone);
@@ -167,9 +158,10 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
+        // Generate immediate JWT token for automatic seamless login
         UserDto userDto = new UserDto(savedUser.getId(), savedUser.getName(), savedUser.getEmail(), savedUser.getPhoneNumber());
         String token = jwtService.generateToken(savedUser.getId(), savedUser.getEmail(), savedUser.getName());
-        return new AuthResponse(true, "Registration successful!", userDto, token);
+        return new AuthResponse(true, "Registration successful! Welcome to Finance Tracker.", userDto, token);
     }
 
     /**
