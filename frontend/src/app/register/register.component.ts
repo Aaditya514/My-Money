@@ -16,6 +16,8 @@ export class RegisterComponent implements OnDestroy {
   errorMessage: string = '';
   successNotice: string = '';
   loading: boolean = false;
+  isSubmitting: boolean = false;
+  registrationSuccess: boolean = false;
   otpStep: boolean = false;
   simulatedOtp: string = '';
   resendCooldown: number = 0;
@@ -95,6 +97,8 @@ export class RegisterComponent implements OnDestroy {
   }
 
   onRequestOtp(): void {
+    if (this.loading || this.isSubmitting) return;
+
     const nameField = this.registerForm.get('name');
     const emailField = this.registerForm.get('email');
     const phoneField = this.registerForm.get('phoneNumber');
@@ -150,7 +154,7 @@ export class RegisterComponent implements OnDestroy {
   }
 
   onResendOtp(): void {
-    if (this.resendCooldown > 0) return;
+    if (this.resendCooldown > 0 || this.loading || this.isSubmitting) return;
     const email = this.registerForm.get('email')?.value?.trim().toLowerCase();
     if (!email) return;
 
@@ -202,6 +206,10 @@ export class RegisterComponent implements OnDestroy {
       return;
     }
 
+    if (this.loading || this.isSubmitting || this.registrationSuccess) {
+      return;
+    }
+
     const otpField = this.registerForm.get('otp');
     otpField?.markAsTouched();
 
@@ -210,6 +218,7 @@ export class RegisterComponent implements OnDestroy {
     }
 
     this.loading = true;
+    this.isSubmitting = true;
     this.errorMessage = '';
 
     const { name, phoneNumber, email, password, otp } = this.registerForm.value;
@@ -223,12 +232,29 @@ export class RegisterComponent implements OnDestroy {
     }).subscribe({
       next: (response) => {
         this.loading = false;
+        this.isSubmitting = false;
         if (response.success) {
-          this.router.navigate(['/dashboard']);
+          this.registrationSuccess = true;
+          this.successNotice = 'Account verified and created successfully! Welcome to Finance Tracker.';
+          setTimeout(() => {
+            this.router.navigate(['/dashboard']);
+          }, 1000);
         }
       },
       error: (err) => {
         this.loading = false;
+        this.isSubmitting = false;
+
+        // If user already got authenticated in a concurrent request
+        if (this.authService.isLoggedIn()) {
+          this.registrationSuccess = true;
+          this.successNotice = 'Account verified! Redirecting to your dashboard...';
+          setTimeout(() => {
+            this.router.navigate(['/dashboard']);
+          }, 800);
+          return;
+        }
+
         if (err.status === 0) {
           this.errorMessage = 'Cannot reach backend server. Please check connection and try again.';
         } else {

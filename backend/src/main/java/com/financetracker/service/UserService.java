@@ -97,10 +97,6 @@ public class UserService {
             if (cleanPhone.length() != 10) {
                 throw new RuntimeException("Phone number must be exactly 10 digits.");
             }
-
-            if (userRepository.existsByPhoneNumber(cleanPhone)) {
-                throw new RuntimeException("Phone number is already registered. Please login instead.");
-            }
         }
 
         // Assign clean email or fallback phone email for database integrity
@@ -112,8 +108,37 @@ public class UserService {
             throw new RuntimeException("Either phone number or email is required.");
         }
 
-        if (email != null && userRepository.existsByEmail(email)) {
-            throw new RuntimeException("Email address is already registered. Please login or use a different email.");
+        // Idempotency check 1: Check if user with this email already exists
+        if (email != null) {
+            Optional<User> existingEmailOpt = userRepository.findByEmail(email);
+            if (existingEmailOpt.isPresent()) {
+                User existing = existingEmailOpt.get();
+                // If registered recently (within 5 minutes) and password matches, return existing session
+                if (existing.getCreatedAt() != null &&
+                    existing.getCreatedAt().isAfter(java.time.LocalDateTime.now().minusMinutes(5)) &&
+                    passwordEncoder.matches(request.getPassword(), existing.getPassword())) {
+                    UserDto userDto = new UserDto(existing.getId(), existing.getName(), existing.getEmail(), existing.getPhoneNumber());
+                    String token = jwtService.generateToken(existing.getId(), existing.getEmail(), existing.getName());
+                    return new AuthResponse(true, "Registration successful!", userDto, token);
+                }
+                throw new RuntimeException("Email address is already registered. Please login or use a different email.");
+            }
+        }
+
+        // Idempotency check 2: Check if user with this phone already exists
+        if (cleanPhone != null) {
+            Optional<User> existingPhoneOpt = userRepository.findByPhoneNumber(cleanPhone);
+            if (existingPhoneOpt.isPresent()) {
+                User existing = existingPhoneOpt.get();
+                if (existing.getCreatedAt() != null &&
+                    existing.getCreatedAt().isAfter(java.time.LocalDateTime.now().minusMinutes(5)) &&
+                    passwordEncoder.matches(request.getPassword(), existing.getPassword())) {
+                    UserDto userDto = new UserDto(existing.getId(), existing.getName(), existing.getEmail(), existing.getPhoneNumber());
+                    String token = jwtService.generateToken(existing.getId(), existing.getEmail(), existing.getName());
+                    return new AuthResponse(true, "Registration successful!", userDto, token);
+                }
+                throw new RuntimeException("Phone number is already registered. Please login instead.");
+            }
         }
 
         // Verify OTP if OTP is provided/required
