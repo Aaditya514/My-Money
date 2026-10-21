@@ -13,7 +13,7 @@ export interface LoginRequest {
 
 export interface RegisterRequest {
   name: string;
-  phoneNumber?: string;
+  phoneNumber: string;
   password: string;
   otp?: string;
   email?: string;

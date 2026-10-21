@@ -238,7 +238,7 @@ export class SalaryPlanComponent implements OnInit {
         initialEmergencyFundBalance: 0,
         notes: ''
       });
-      this.addIncomeSource({ sourceName: 'Primary Income', plannedAmount: 0 });
+      this.addIncomeSource({ sourceName: 'Primary Salary', plannedAmount: 0 });
     }
     this.errorMessage = '';
   }

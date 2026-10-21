@@ -49,7 +49,7 @@ class ExportServiceTest {
 
     @BeforeEach
     void setUp() {
-        AuthResponse auth = userService.register(new RegisterRequest("Exporter", "export@example.com", "password123"));
+        AuthResponse auth = userService.register(new RegisterRequest("Exporter", "export@example.com", "password123", "9876543202"));
         userId = auth.getUser().getId();
     }
 

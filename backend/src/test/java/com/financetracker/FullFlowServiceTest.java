@@ -49,7 +49,7 @@ class FullFlowServiceTest {
     @BeforeEach
     void setUp() {
         // Create user
-        RegisterRequest registerReq = new RegisterRequest("Alice", "alice@example.com", "password123");
+        RegisterRequest registerReq = new RegisterRequest("Alice", "alice@example.com", "password123", "9876543203");
         AuthResponse auth = userService.register(registerReq);
         userId = auth.getUser().getId();
 

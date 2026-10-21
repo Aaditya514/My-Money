@@ -1,12 +1,16 @@
 package com.financetracker.service;
 
 import com.financetracker.dto.*;
+import com.financetracker.entity.Category;
+import com.financetracker.entity.CategoryType;
 import com.financetracker.entity.User;
+import com.financetracker.repository.CategoryRepository;
 import com.financetracker.repository.UserRepository;
 import com.financetracker.security.JwtService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -15,24 +19,62 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final CategoryRepository categoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final OtpService otpService;
     private final SmsService smsService;
     private final EmailService emailService;
 
+    // High-performance thread-safe in-memory cache for user lookups by 10-digit mobile number
+    private final java.util.Map<String, User> phoneUserCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     public UserService(UserRepository userRepository,
+                       CategoryRepository categoryRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        OtpService otpService,
                        SmsService smsService,
                        EmailService emailService) {
         this.userRepository = userRepository;
+        this.categoryRepository = categoryRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.otpService = otpService;
         this.smsService = smsService;
         this.emailService = emailService;
+    }
+
+    /**
+     * Looks up user by 10-digit phone number: searches cache first, then database, and caches on hit.
+     */
+    public Optional<User> findUserByPhone(String rawPhone) {
+        if (rawPhone == null || rawPhone.isBlank()) {
+            return Optional.empty();
+        }
+        String cleanPhone = otpService.normalizePhoneNumber(rawPhone);
+        if (cleanPhone.length() != 10) {
+            return Optional.empty();
+        }
+
+        // 1. Search in cache first
+        User cached = phoneUserCache.get(cleanPhone);
+        if (cached != null) {
+            if (userRepository.existsById(cached.getId())) {
+                return Optional.of(cached);
+            } else {
+                phoneUserCache.remove(cleanPhone);
+            }
+        }
+
+        // 2. If not found in cache, query database
+        Optional<User> dbUser = userRepository.findByPhoneNumber(cleanPhone);
+        dbUser.ifPresent(u -> phoneUserCache.put(cleanPhone, u));
+        return dbUser;
+    }
+
+    public void clearPhoneCache() {
+        phoneUserCache.clear();
     }
 
     /**
@@ -97,15 +139,6 @@ public class UserService {
             throw new RuntimeException("Full name is required.");
         }
 
-        // Phone number is strictly mandatory for Splitwise matching & user identity
-        if (request.getPhoneNumber() == null || request.getPhoneNumber().trim().isBlank()) {
-            throw new RuntimeException("Mobile number is required for Splitwise group matching.");
-        }
-        String cleanPhone = otpService.normalizePhoneNumber(request.getPhoneNumber());
-        if (cleanPhone.length() != 10) {
-            throw new RuntimeException("Mobile number must be exactly 10 digits.");
-        }
-
         // Email address is required
         if (request.getEmail() == null || request.getEmail().trim().isBlank()) {
             throw new RuntimeException("Email address is required.");
@@ -113,6 +146,15 @@ public class UserService {
         String email = request.getEmail().trim().toLowerCase();
         if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
             throw new RuntimeException("Please provide a valid email address.");
+        }
+
+        // Phone number is strictly mandatory for Splitwise matching & user identity
+        if (request.getPhoneNumber() == null || request.getPhoneNumber().trim().isBlank()) {
+            throw new RuntimeException("Mobile number is required for Splitwise group matching.");
+        }
+        String cleanPhone = otpService.normalizePhoneNumber(request.getPhoneNumber());
+        if (cleanPhone.length() != 10) {
+            throw new RuntimeException("Mobile number must be exactly 10 digits.");
         }
 
         // Password validation
@@ -135,8 +177,8 @@ public class UserService {
             throw new RuntimeException("Email address is already registered. Please login instead.");
         }
 
-        // Idempotency / Duplicate check 2: Phone number
-        Optional<User> existingPhoneOpt = userRepository.findByPhoneNumber(cleanPhone);
+        // Idempotency / Duplicate check 2: Phone number (search cache first, then DB)
+        Optional<User> existingPhoneOpt = findUserByPhone(cleanPhone);
         if (existingPhoneOpt.isPresent()) {
             User existing = existingPhoneOpt.get();
             if (existing.getCreatedAt() != null &&
@@ -158,6 +200,9 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
+        // Put in phone cache immediately
+        phoneUserCache.put(cleanPhone, savedUser);
+
         // Generate immediate JWT token for automatic seamless login
         UserDto userDto = new UserDto(savedUser.getId(), savedUser.getName(), savedUser.getEmail(), savedUser.getPhoneNumber());
         String token = jwtService.generateToken(savedUser.getId(), savedUser.getEmail(), savedUser.getName());
@@ -173,8 +218,9 @@ public class UserService {
 
         Optional<User> userOptional = Optional.empty();
 
+        // Check phone cache first, then DB
         if (cleanPhone.length() == 10) {
-            userOptional = userRepository.findByPhoneNumber(cleanPhone);
+            userOptional = findUserByPhone(cleanPhone);
         }
 
         if (userOptional.isEmpty()) {
@@ -205,14 +251,35 @@ public class UserService {
     }
 
     /**
-     * Searches registered users in DB by name or phone
+     * Searches registered users: checks cache first by phone number, then queries database
      */
     public List<UserDto> searchUsers(String query) {
         if (query == null || query.trim().length() < 2) {
             return List.of();
         }
         String cleanQuery = query.trim();
-        return userRepository.searchByNameOrPhone(cleanQuery).stream()
+        String normalizedDigits = otpService.normalizePhoneNumber(cleanQuery);
+
+        // 1. Search in cache first if query is a 10-digit phone number
+        if (normalizedDigits.length() == 10) {
+            User cached = phoneUserCache.get(normalizedDigits);
+            if (cached != null) {
+                if (userRepository.existsById(cached.getId())) {
+                    return List.of(new UserDto(cached.getId(), cached.getName(), cached.getEmail(), cached.getPhoneNumber()));
+                } else {
+                    phoneUserCache.remove(normalizedDigits);
+                }
+            }
+        }
+
+        // 2. Query DB and populate cache with found users
+        List<User> results = userRepository.searchByNameOrPhone(cleanQuery);
+        for (User u : results) {
+            if (u.getPhoneNumber() != null && !u.getPhoneNumber().isBlank()) {
+                phoneUserCache.put(otpService.normalizePhoneNumber(u.getPhoneNumber()), u);
+            }
+        }
+        return results.stream()
                 .map(u -> new UserDto(u.getId(), u.getName(), u.getEmail(), u.getPhoneNumber()))
                 .collect(Collectors.toList());
     }

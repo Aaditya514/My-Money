@@ -43,7 +43,7 @@ class AccountServiceTest {
 
     @BeforeEach
     void setUp() {
-        AuthResponse user1 = userService.register(new RegisterRequest("Bob", "bob@example.com", "password123"));
+        AuthResponse user1 = userService.register(new RegisterRequest("Bob", "bob@example.com", "password123", "9876543201"));
         user1Id = user1.getUser().getId();
 
         Category foodCat = categoryRepository.findByName("Food")

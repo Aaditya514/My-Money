@@ -40,7 +40,8 @@ class ValidationTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.errors.name").exists())
                 .andExpect(jsonPath("$.errors.email").exists())
-                .andExpect(jsonPath("$.errors.password").exists());
+                .andExpect(jsonPath("$.errors.password").exists())
+                .andExpect(jsonPath("$.errors.phoneNumber").exists());
     }
 
     @Test

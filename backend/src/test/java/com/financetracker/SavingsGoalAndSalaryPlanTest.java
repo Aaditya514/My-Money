@@ -51,7 +51,7 @@ class SavingsGoalAndSalaryPlanTest {
 
     @BeforeEach
     void setUp() {
-        AuthResponse userResp = userService.register(new RegisterRequest("Alice", "alice@example.com", "password123"));
+        AuthResponse userResp = userService.register(new RegisterRequest("Alice", "alice@example.com", "password123", "9876543204"));
         userId = userResp.getUser().getId();
 
         AccountResponse salaryAcc = accountService.createAccount(

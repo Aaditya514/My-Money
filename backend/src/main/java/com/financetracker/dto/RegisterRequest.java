@@ -36,11 +36,11 @@ public class RegisterRequest {
         this.password = password;
     }
 
-    public RegisterRequest(String name, String phoneNumber, String password, String otp) {
+    public RegisterRequest(String name, String email, String password, String phoneNumber) {
         this.name = name;
-        this.phoneNumber = phoneNumber;
+        this.email = email;
         this.password = password;
-        this.otp = otp;
+        this.phoneNumber = phoneNumber;
     }
 
     public RegisterRequest(String name, String email, String password, String phoneNumber, String otp) {

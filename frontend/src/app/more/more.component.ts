@@ -9,6 +9,8 @@ import { DialogService } from '../services/dialog.service';
 import { ThemeService, AppTheme } from '../services/theme.service';
 import { Observable } from 'rxjs';
 
+import { User } from '../models/user.model';
+
 @Component({
   selector: 'app-more',
   standalone: true,
@@ -17,7 +19,7 @@ import { Observable } from 'rxjs';
   styleUrls: ['./more.component.css']
 })
 export class MoreComponent implements OnInit {
-  currentUser: { id: number; name: string; email: string } | null = null;
+  currentUser: User | null = null;
   deferredPrompt: any = null;
   isInstalled: boolean = false;
   unreadCount$: Observable<number>;
@@ -47,6 +49,9 @@ export class MoreComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.authService.currentUser$.subscribe((u) => {
+      this.currentUser = u;
+    });
     this.currentUser = this.authService.getCurrentUser();
     this.loadKeyStatus();
 

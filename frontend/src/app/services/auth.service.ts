@@ -43,9 +43,7 @@ export class AuthService {
         phoneNumber: raw.phoneNumber || ''
       };
 
-      if (raw.id !== id) {
-        localStorage.setItem('currentUser', JSON.stringify(normalized));
-      }
+      localStorage.setItem('currentUser', JSON.stringify(normalized));
 
       return normalized;
     } catch (e) {
